@@ -192,7 +192,7 @@ isValidSentence = reserved "isValid" >> (IsValid <$> expr)
 ---------------------------------------
 -- General parsers
 ---------------------------------------
-program :: P [Sentence]
+program :: P Program
 program = many sentence
 
 runP :: P a -> String -> String -> Either ParseError a
@@ -207,3 +207,9 @@ parseSentence :: String -> Sentence
 parseSentence s = case runP sentence s "" of
                     Right t -> t
                     Left e -> error ("no parse: " ++ show s)
+
+parseProgram :: String -> Program
+parseProgram s = case runP program s "" of
+                    Right t -> t
+                    Left e -> error ("no parse: " ++ show s)
+
