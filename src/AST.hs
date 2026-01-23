@@ -42,15 +42,16 @@ data Expr
   | LabelExp [Label]
   | TransitionExp [Transition]
   | VarExp VarIdent
+  deriving (Show, Eq)
 
 data Formula
   = F
   | T
   | Atom AtomIdent
-  | Not Expr
-  | BinaryOp BinaryOp Expr Expr
-  | UQuantifier UQuantifier Expr
-  | BQuantifier BQuantifier Expr Expr
+  | Not Formula
+  | BinaryOp BinaryOp Formula Formula
+  | UQuantifier UQuantifier Formula
+  | BQuantifier BQuantifier Formula Formula
   | Var VarIdent
   deriving (Show, Eq)
 

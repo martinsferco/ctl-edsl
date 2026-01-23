@@ -80,21 +80,22 @@ nodeIdent = try $ do
 
 
 typeParser :: P Type
-typeParser = try (reserved "Model"       >> return Model)       <|>
-             try (reserved "Labels"      >> return Labels)      <|>
-             try (reserved "Transitions" >> return Transitions) <|>
-             try (reserved "Formula"     >> return Formula) 
+typeParser = try (reserved "Model"       >> return ModelTy)       <|>
+             try (reserved "Labels"      >> return LabelsTy)      <|>
+             try (reserved "Transitions" >> return TransitionsTy) <|>
+             try (reserved "Formula"     >> return FormulaTy) 
 
 
 
 expr :: P Expr
-expr = try labelsExpr     <|>
+expr = try labelsExpr      <|>
        try modelExpr       <|>
        try transitionsExpr <|>
+       try varExpr         <|>
        formulaExpr
 
 labelsExpr :: P Expr 
-labelsExpr = LabelDef <$> braces (many labelsExprAux)
+labelsExpr = LabelExp <$> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
                            label <- braces $ commaSep atomIdent
@@ -105,10 +106,10 @@ modelExpr = angles modelExprAux
   where modelExprAux = do transExpr <- expr
                           reservedOp ","
                           labelExpr <- expr
-                          return $ ModelDef transExpr labelExpr
+                          return $ ModelExpr transExpr labelExpr
 
 transitionsExpr :: P Expr
-transitionsExpr = TransDef <$> braces (many transitionsExprAux)
+transitionsExpr = TransitionExp <$> braces (many transitionsExprAux)
   where transitionsExprAux = do (node, isInitial) <- parseNode
                                 reservedOp "=>"
                                 neighboors <- braces $ commaSep nodeIdent
@@ -117,19 +118,26 @@ transitionsExpr = TransDef <$> braces (many transitionsExprAux)
         parseNode = try (do node <- parens nodeIdent ; return (node, True)) <|>
                         (do node <- nodeIdent        ; return (node, False))
 
-formulaExpr :: P Expr
-formulaExpr = chainr1 impliesTerm (reservedOp "->" >> return (BinaryOp Implies))
 
-impliesTerm :: P Expr
+varExpr :: P Expr 
+varExpr = VarExp <$> varIdent
+
+formulaExpr :: P Expr
+formulaExpr = FormulaExpr <$> formulaExpr'
+  
+formulaExpr' :: P Formula
+formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (BinaryOp Implies))
+
+impliesTerm :: P Formula
 impliesTerm = chainl1 orTerm (reservedOp "||" >> return (BinaryOp Or))
 
-orTerm :: P Expr
+orTerm :: P Formula
 orTerm = chainl1 andTerm (reservedOp "&&" >> return (BinaryOp And))
 
-andTerm :: P Expr
+andTerm :: P Formula
 andTerm = try unaryQuantifier <|> binaryQuantifier
 
-unaryQuantifier :: P Expr
+unaryQuantifier :: P Formula
 unaryQuantifier = try (reserved "A" >> reserved   "o"  >> UQuantifier AC <$> unaryQuantifier) <|>
                   try (reserved "E" >> reserved   "o"  >> UQuantifier EC <$> unaryQuantifier) <|>
                   try (reserved "A" >> reservedOp "<>" >> UQuantifier AR <$> unaryQuantifier) <|>
@@ -138,21 +146,21 @@ unaryQuantifier = try (reserved "A" >> reserved   "o"  >> UQuantifier AC <$> una
                   try (reserved "E" >> reservedOp "[]" >> UQuantifier ES <$> unaryQuantifier) <|>
                       quantifierTerm
 
-binaryQuantifier :: P Expr
+binaryQuantifier :: P Formula
 binaryQuantifier = try  (reserved "A" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux) <|>
                         (reserved "E" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux)
 
-  where binaryAux = do  leftFormula <- formulaExpr
+  where binaryAux = do  leftFormula <- formulaExpr'
                         reserved "U"
-                        rightFormula <- formulaExpr
+                        rightFormula <- formulaExpr'
                         return (leftFormula, rightFormula)
 
-quantifierTerm :: P Expr
+quantifierTerm :: P Formula
 quantifierTerm = try (reservedOp "!" >> Not <$> quantifierTerm) <|>
                  atomicTerm
 
-atomicTerm :: P Expr 
-atomicTerm =  try (parens formulaExpr)       <|>
+atomicTerm :: P Formula 
+atomicTerm =  try (parens formulaExpr')       <|>
               try (reserved "T" >> return T) <|>
               try (reserved "F" >> return F) <|>
               try (Var <$> varIdent)         <|>
