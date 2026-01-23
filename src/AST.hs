@@ -1,4 +1,4 @@
-module AST where
+module AST (..) where
 
 type VarIdent = String
 type AtomIdent = String
@@ -37,7 +37,7 @@ type Neighboors = [NodeIdent]
 type Transition = (NodeIdent, Bool, Neighboors)
 
 data Expr 
-  = FormulaExpr Formula
+  = FormulaExpr Formula   
   | ModelExpr Expr Expr
   | LabelExp [Label]
   | TransitionExp [Transition]
