@@ -5,10 +5,10 @@ type AtomIdent = String
 type NodeIdent = String
 
 data Type
-   = Model
-   | Labels
-   | Transitions
-   | Formula
+   = ModelTy
+   | LabelsTy
+   | TransitionsTy
+   | FormulaTy
    deriving (Show, Eq)
 
 
@@ -36,7 +36,14 @@ type Label = (NodeIdent, [AtomIdent])
 type Neighboors = [NodeIdent]
 type Transition = (NodeIdent, Bool, Neighboors)
 
-data Expr
+data Expr 
+  = FormulaExpr Formula
+  | ModelExpr Expr Expr
+  | LabelExp [Label]
+  | TransitionExp [Transition]
+  | VarExp VarIdent
+
+data Formula
   = F
   | T
   | Atom AtomIdent
@@ -44,14 +51,8 @@ data Expr
   | BinaryOp BinaryOp Expr Expr
   | UQuantifier UQuantifier Expr
   | BQuantifier BQuantifier Expr Expr
-
   | Var VarIdent
-
-  | ModelDef Expr Expr
-  | LabelDef [Label]
-  | TransDef [Transition]
   deriving (Show, Eq)
-
 
 data Sentence 
   = Def VarIdent Type Expr
@@ -59,6 +60,5 @@ data Sentence
   | IsValid Expr
   | Models Expr Expr
   deriving (Show, Eq)
-
 
 type Program = [Sentence]
