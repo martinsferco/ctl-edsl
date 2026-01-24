@@ -25,7 +25,14 @@ source-repository head
 
 library
   exposed-modules:
+      AST
+      Error
+      Global
       Lib
+      Monad
+      Parser
+      Sat
+      TypeCheck
   other-modules:
       Paths_ctl_edsl
   autogen-modules:
