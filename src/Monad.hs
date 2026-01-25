@@ -4,13 +4,12 @@ import Global
 import Errors
 
 
-class (MonadIO m, MonadState GlobalState m, MonadError Errors m, MonadReader Configuration m) 
-  => MonadCTL m where
+class (MonadIO m, MonadState GState m, MonadError Error m) => MonadCTL m where
 
 
     
 
 
 
-
+newtype CTL = 
 

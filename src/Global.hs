@@ -1,12 +1,12 @@
 module Global where
 
+import AST
 
-data GlobalState = GlobalState {
-  lastFile :: String,
-  globalDeclarations :: [Int]
+data GState = GState {
+  declarations :: [(VarIdent, Type, Expr)]
 }
 
-data Configuration = Configuration {
+data Conf = Conf {
   mode :: Mode
 }
 

@@ -18,6 +18,10 @@ sat = sat' . transform
     sat' m (BQuantifier EU p q) = undefined
     sat' _ _  = error "It should be transformed already"
 
+counterExample ::  TSystem -> Formula
+counterExample 
+
+
 transform :: Formula -> Formula
 transform F = F
 transform T = (Not F)
