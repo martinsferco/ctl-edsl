@@ -1,8 +1,9 @@
-module Errors where
+module Error where
 
-import Text.Parser.Error ( ParseError )
+import Text.Parsec.Error ( ParseError )
 
 data Error 
   = ParseErr ParseError
   | TypeErr 
   | EvalErr
+  deriving (Show, Eq)

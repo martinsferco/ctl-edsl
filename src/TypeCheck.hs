@@ -1,12 +1,14 @@
-module TypeCheck (..) where
+module TypeCheck where
+
 
 import AST
 
+import qualified Data.Set as Set
 
-(ofType) :: Expr -> Type -> m()
+ofType :: Expr -> Type -> m()
 -- encontramos el tipo de la expresion, y lo comparamos
 -- contra el t 
-expr ofType type = undefined
+ofType expr ty = undefined
 
 -- esto va a tener quser mondaico porque quiero accedwer a las variables globales
 findType :: Expr -> Type
@@ -19,7 +21,7 @@ findType (TransitionExp _) = TransitionsTy
 findType (VarExp var)      = undefined
 
 -- me tengo que fijar que todas tengan el tipo de formula
-findType (FormulaExpr f)   = let fv = toList $ freeVariables f
+-- findType (FormulaExpr f)   = let fv = toList $ freeVariables f
                                  
 
 freeVariables :: Formula -> Set.Set VarIdent
@@ -41,10 +43,10 @@ freeVariables (BQuantifier _ p q) = let varP = freeVariables p
 freeVariables (Var var)           = Set.singleton var
 
 
-typeCheck :: Sentence -> m() 
-typeCheck (Def _ type expr) = expr ofType type 
-typeCheck (Export model) = model ofType ModelTy
-typeCheck (IsValid formula) = formula ofType FormulaTy
-typeCheck (Models model formula) = do model ofType ModelTy
-                                      formula ofType FormulaTy
+-- typeCheck :: Sentence -> m() 
+-- typeCheck (Def _ ty expr) = expr `ofType` ty 
+-- typeCheck (Export model) = model `ofType` ModelTy
+-- typeCheck (IsValid formula) = formula `ofType` FormulaTy
+-- typeCheck (Models model formula) = do model `ofType` ModelTy
+--                                       formula `ofType` FormulaTy
 

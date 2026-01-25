@@ -1,4 +1,4 @@
-module AST (..) where
+module AST where
 
 type VarIdent = String
 type AtomIdent = String
