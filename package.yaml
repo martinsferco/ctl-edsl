@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/ctl-edsl#readme>
+description:         Please see the README on GitHub at <https://github.com/martinsferco/ctl-edsl#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -35,6 +35,11 @@ ghc-options:
 
 library:
   source-dirs: src
+  dependencies:
+  - mtl
+  - optparse-applicative
+  - containers
+  - parsec
 
 executables:
   ctl-edsl-exe:
@@ -46,6 +51,11 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ctl-edsl
+    - mtl
+    - optparse-applicative
+    - containers
+    - parsec
+
 
 tests:
   ctl-edsl-test:

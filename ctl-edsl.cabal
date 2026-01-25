@@ -6,7 +6,7 @@ cabal-version: 2.2
 
 name:           ctl-edsl
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/ctl-edsl#readme>
+description:    Please see the README on GitHub at <https://github.com/martinsferco/ctl-edsl#readme>
 homepage:       https://github.com/githubuser/ctl-edsl#readme
 bug-reports:    https://github.com/githubuser/ctl-edsl/issues
 author:         Author name here
@@ -29,7 +29,7 @@ library
       Error
       Global
       Lib
-      Monad
+      MonadCTL
       Parser
       Sat
       TypeCheck
@@ -42,6 +42,10 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , containers
+    , mtl
+    , optparse-applicative
+    , parsec
   default-language: Haskell2010
 
 executable ctl-edsl-exe
@@ -55,7 +59,11 @@ executable ctl-edsl-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , ctl-edsl
+    , mtl
+    , optparse-applicative
+    , parsec
   default-language: Haskell2010
 
 test-suite ctl-edsl-test
