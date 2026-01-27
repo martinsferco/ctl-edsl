@@ -6,15 +6,32 @@
 
 module MonadCTL where
 
-import Global 
 import Error
 import Common
 import AST
+
 
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Reader
 import System.IO
+
+
+data GState = GState {
+  definitions :: [Definition]
+}
+
+initialState :: GState
+initialState = GState []
+
+data Mode 
+  = Interactive 
+  | Eval
+  | TypeCheck
+
+data Conf = Conf {
+  mode :: Mode
+}
 
 class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m) 
   => MonadCTL m where
