@@ -1,7 +1,6 @@
 module Main where
 
 import MonadCTL ( MonadCTL, CTL, runCTL )
-import Global
 import Control.Monad.Trans 
 
 import Parser ( P, program, runP )
