@@ -26,12 +26,15 @@ source-repository head
 library
   exposed-modules:
       AST
+      Common
       Error
       Global
       Lib
       MonadCTL
       Parser
+      Reduce
       Sat
+      TSystem
       TypeCheck
   other-modules:
       Paths_ctl_edsl

@@ -1,6 +1,7 @@
 module Parser where
 
 import AST 
+import Common
 
 import Text.Parsec hiding (runP, parse)
 
@@ -95,7 +96,7 @@ expr = try labelsExpr      <|>
        formulaExpr
 
 labelsExpr :: P Expr 
-labelsExpr = r <$> braces (many labelsExprAux)
+labelsExpr = LabelExpr <$> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
                            label <- braces $ commaSep atomIdent
@@ -126,29 +127,29 @@ formulaExpr :: P Expr
 formulaExpr = FormulaExpr <$> formulaExpr'
   
 formulaExpr' :: P SFormula
-formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (BinaryOp Implies))
+formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (SBinaryOp Implies))
 
 impliesTerm :: P SFormula
-impliesTerm = chainl1 orTerm (reservedOp "||" >> return (BinaryOp Or))
+impliesTerm = chainl1 orTerm (reservedOp "||" >> return (SBinaryOp Or))
 
 orTerm :: P SFormula
-orTerm = chainl1 andTerm (reservedOp "&&" >> return (BinaryOp And))
+orTerm = chainl1 andTerm (reservedOp "&&" >> return (SBinaryOp And))
 
 andTerm :: P SFormula
 andTerm = try unaryQuantifier <|> binaryQuantifier
 
 unaryQuantifier :: P SFormula
-unaryQuantifier = try (reserved "A" >> reserved   "o"  >> UQuantifier AC <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reserved   "o"  >> UQuantifier EC <$> unaryQuantifier) <|>
-                  try (reserved "A" >> reservedOp "<>" >> UQuantifier AR <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reservedOp "<>" >> UQuantifier ER <$> unaryQuantifier) <|>
-                  try (reserved "A" >> reservedOp "[]" >> UQuantifier AS <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reservedOp "[]" >> UQuantifier ES <$> unaryQuantifier) <|>
+unaryQuantifier = try (reserved "A" >> reserved   "o"  >> SUQuantifier AC <$> unaryQuantifier) <|>
+                  try (reserved "E" >> reserved   "o"  >> SUQuantifier EC <$> unaryQuantifier) <|>
+                  try (reserved "A" >> reservedOp "<>" >> SUQuantifier AR <$> unaryQuantifier) <|>
+                  try (reserved "E" >> reservedOp "<>" >> SUQuantifier ER <$> unaryQuantifier) <|>
+                  try (reserved "A" >> reservedOp "[]" >> SUQuantifier AS <$> unaryQuantifier) <|>
+                  try (reserved "E" >> reservedOp "[]" >> SUQuantifier ES <$> unaryQuantifier) <|>
                       quantifierTerm
 
 binaryQuantifier :: P SFormula
-binaryQuantifier = try  (reserved "A" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux) <|>
-                        (reserved "E" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux)
+binaryQuantifier = try  (reserved "A" >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
+                        (reserved "E" >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux)
 
   where binaryAux = do  leftFormula <- formulaExpr'
                         reserved "U"
@@ -156,15 +157,15 @@ binaryQuantifier = try  (reserved "A" >> (uncurry $ BQuantifier AU) <$> brackets
                         return (leftFormula, rightFormula)
 
 quantifierTerm :: P SFormula
-quantifierTerm = try (reservedOp "!" >> Not <$> quantifierTerm) <|>
+quantifierTerm = try (reservedOp "!" >> SNot <$> quantifierTerm) <|>
                  atomicTerm
 
 atomicTerm :: P SFormula 
 atomicTerm =  try (parens formulaExpr')       <|>
-              try (reserved "T" >> return T) <|>
-              try (reserved "F" >> return F) <|>
-              try (Var <$> varIdent)         <|>
-                  (Atom <$> atomIdent)     
+              try (reserved "T" >> return ST) <|>
+              try (reserved "F" >> return SF) <|>
+              try (SVar <$> varIdent)         <|>
+                  (SAtom <$> atomIdent)     
 
 
 
