@@ -2,51 +2,57 @@ module TypeCheck where
 
 
 import AST
+import Common
+import MonadCTL
 
 import qualified Data.Set as Set
 
-ofType :: Expr -> Type -> m()
--- encontramos el tipo de la expresion, y lo comparamos
--- contra el t 
-ofType expr ty = undefined
+ofType :: MonadCTL m => Expr -> Type -> m()
+ofType expr ty = do exprTy <- findType expr
+                    expectType exprTy ty
 
--- esto va a tener quser mondaico porque quiero accedwer a las variables globales
-findType :: Expr -> Type
--- me tengo que fijar que el primero sea trans y el segundo label
-findType (ModelExpr t l)   = undefined
-findType (LabelExp _)      = LabelsTy
-findType (TransitionExp _) = TransitionsTy
+expectType :: MonadCTL m => Type -> Type -> m()      
+expectType ty1 ty2 = if ty1 == ty2 then return ()
+                                   else failCTL "no matchean los tipos"
 
--- me fijo en el estado que tenga tipo forumla
-findType (VarExp var)      = undefined
+findType :: MonadCTL m => Expr -> m Type
+findType (ModelExpr t l)   = do ofType t TransitionsTy
+                                ofType l LabelsTy
+                                return ModelTy
+findType (LabelExpr _)      = return LabelsTy
+findType (TransitionExpr _) = return TransitionsTy
 
--- me tengo que fijar que todas tengan el tipo de formula
--- findType (FormulaExpr f)   = let fv = toList $ freeVariables f
-                                 
+findType (VarExpr var)      = getTy var
 
-freeVariables :: Formula -> Set.Set VarIdent
-freeVariables F                   = Set.empty
-freeVariables T                   = Set.empty
-freeVariables (Atom _)            = Set.empty
-freeVariables (Not p)             = freeVariables p
+findType (FormulaExpr f)   = do let fv = Set.toList $ freeVariables f
+                                mapM_ checkFormulaVarTy fv
+                                return FormulaTy
 
-freeVariables (BinaryOp _ p q)    = let varP = freeVariables p
-                                        varQ = freeVariables q
-                                    in Set.union varP varQ
+    where checkFormulaVarTy :: MonadCTL m => VarIdent -> m ()
+          checkFormulaVarTy var = do varTy <- getTy var
+                                     expectType varTy FormulaTy
 
-freeVariables (UQuantifier _ p)   = freeVariables p
+freeVariables :: SFormula -> Set.Set VarIdent
+freeVariables SF                   = Set.empty
+freeVariables ST                   = Set.empty
+freeVariables (SAtom _)            = Set.empty
+freeVariables (SNot p)             = freeVariables p
 
-freeVariables (BQuantifier _ p q) = let varP = freeVariables p
-                                        varQ = freeVariables q
-                                    in Set.union varP varQ
+freeVariables (SBinaryOp _ p q)    = let varP = freeVariables p
+                                         varQ = freeVariables q
+                                     in Set.union varP varQ
 
-freeVariables (Var var)           = Set.singleton var
+freeVariables (SUQuantifier _ p)   = freeVariables p
 
+freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
+                                         varQ = freeVariables q
+                                     in Set.union varP varQ
 
--- typeCheck :: Sentence -> m() 
--- typeCheck (Def _ ty expr) = expr `ofType` ty 
--- typeCheck (Export model) = model `ofType` ModelTy
--- typeCheck (IsValid formula) = formula `ofType` FormulaTy
--- typeCheck (Models model formula) = do model `ofType` ModelTy
---                                       formula `ofType` FormulaTy
+freeVariables (SVar var)           = Set.singleton var
 
+typeCheckSentence :: MonadCTL m => Sentence -> m() 
+typeCheckSentence (Def _ ty expr)        = expr `ofType` ty 
+typeCheckSentence (Export model)         = model `ofType` ModelTy
+typeCheckSentence (IsValid formula)      = formula `ofType` FormulaTy
+typeCheckSentence (Models model formula) = do model `ofType` ModelTy
+                                              formula `ofType` FormulaTy
