@@ -1,8 +1,8 @@
 module AST where
 
-type VarIdent = String
-type AtomIdent = String
-type NodeIdent = String
+import TSystem
+import Common
+
 
 data Type
    = ModelTy
@@ -37,11 +37,22 @@ type Neighboors = [NodeIdent]
 type Transition = (NodeIdent, Bool, Neighboors)
 
 data Expr 
-  = FormulaExpr Formula   
+  = FormulaExpr SFormula   
   | ModelExpr Expr Expr
-  | LabelExp [Label]
-  | TransitionExp [Transition]
-  | VarExp VarIdent
+  | LabelExpr [Label]
+  | TransitionExpr [Transition]
+  | VarExpr VarIdent
+  deriving (Show, Eq)
+
+data SFormula
+  = SF
+  | ST
+  | SAtom AtomIdent
+  | SNot SFormula
+  | SBinaryOp BinaryOp SFormula SFormula
+  | SUQuantifier UQuantifier SFormula
+  | SBQuantifier BQuantifier SFormula SFormula
+  | SVar VarIdent
   deriving (Show, Eq)
 
 data Formula
@@ -52,7 +63,6 @@ data Formula
   | BinaryOp BinaryOp Formula Formula
   | UQuantifier UQuantifier Formula
   | BQuantifier BQuantifier Formula Formula
-  | Var VarIdent
   deriving (Show, Eq)
 
 data Sentence 
@@ -60,6 +70,14 @@ data Sentence
   | Export Expr
   | IsValid Expr
   | Models Expr Expr
+  -- | ModelsNode Expr NodeIdent Expr
+  deriving (Show, Eq)
+
+data Value
+  = Formula Formula
+  | Model TSystem
+  | Labels [Label]
+  | Transitions [Transition]
   deriving (Show, Eq)
 
 type Program = [Sentence]

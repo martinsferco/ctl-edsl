@@ -1,9 +1,12 @@
 module Global where
 
 import AST
+import Common
+
+type Definition = (VarIdent, Type, Value)
 
 data GState = GState {
-  declarations :: [(VarIdent, Type, Expr)]
+  definitions :: [Definition]
 }
 
 initialState :: GState

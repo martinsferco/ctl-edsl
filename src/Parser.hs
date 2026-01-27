@@ -95,7 +95,7 @@ expr = try labelsExpr      <|>
        formulaExpr
 
 labelsExpr :: P Expr 
-labelsExpr = LabelExp <$> braces (many labelsExprAux)
+labelsExpr = r <$> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
                            label <- braces $ commaSep atomIdent
@@ -109,7 +109,7 @@ modelExpr = angles modelExprAux
                           return $ ModelExpr transExpr labelExpr
 
 transitionsExpr :: P Expr
-transitionsExpr = TransitionExp <$> braces (many transitionsExprAux)
+transitionsExpr = TransitionExpr <$> braces (many transitionsExprAux)
   where transitionsExprAux = do (node, isInitial) <- parseNode
                                 reservedOp "=>"
                                 neighboors <- braces $ commaSep nodeIdent
@@ -120,24 +120,24 @@ transitionsExpr = TransitionExp <$> braces (many transitionsExprAux)
 
 
 varExpr :: P Expr 
-varExpr = VarExp <$> varIdent
+varExpr = VarExpr <$> varIdent
 
 formulaExpr :: P Expr
 formulaExpr = FormulaExpr <$> formulaExpr'
   
-formulaExpr' :: P Formula
+formulaExpr' :: P SFormula
 formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (BinaryOp Implies))
 
-impliesTerm :: P Formula
+impliesTerm :: P SFormula
 impliesTerm = chainl1 orTerm (reservedOp "||" >> return (BinaryOp Or))
 
-orTerm :: P Formula
+orTerm :: P SFormula
 orTerm = chainl1 andTerm (reservedOp "&&" >> return (BinaryOp And))
 
-andTerm :: P Formula
+andTerm :: P SFormula
 andTerm = try unaryQuantifier <|> binaryQuantifier
 
-unaryQuantifier :: P Formula
+unaryQuantifier :: P SFormula
 unaryQuantifier = try (reserved "A" >> reserved   "o"  >> UQuantifier AC <$> unaryQuantifier) <|>
                   try (reserved "E" >> reserved   "o"  >> UQuantifier EC <$> unaryQuantifier) <|>
                   try (reserved "A" >> reservedOp "<>" >> UQuantifier AR <$> unaryQuantifier) <|>
@@ -146,7 +146,7 @@ unaryQuantifier = try (reserved "A" >> reserved   "o"  >> UQuantifier AC <$> una
                   try (reserved "E" >> reservedOp "[]" >> UQuantifier ES <$> unaryQuantifier) <|>
                       quantifierTerm
 
-binaryQuantifier :: P Formula
+binaryQuantifier :: P SFormula
 binaryQuantifier = try  (reserved "A" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux) <|>
                         (reserved "E" >> (uncurry $ BQuantifier AU) <$> brackets binaryAux)
 
@@ -155,11 +155,11 @@ binaryQuantifier = try  (reserved "A" >> (uncurry $ BQuantifier AU) <$> brackets
                         rightFormula <- formulaExpr'
                         return (leftFormula, rightFormula)
 
-quantifierTerm :: P Formula
+quantifierTerm :: P SFormula
 quantifierTerm = try (reservedOp "!" >> Not <$> quantifierTerm) <|>
                  atomicTerm
 
-atomicTerm :: P Formula 
+atomicTerm :: P SFormula 
 atomicTerm =  try (parens formulaExpr')       <|>
               try (reserved "T" >> return T) <|>
               try (reserved "F" >> return F) <|>
