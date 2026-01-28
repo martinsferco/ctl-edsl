@@ -3,8 +3,16 @@ module Main where
 import MonadCTL ( MonadCTL, CTL, runCTL )
 import Control.Monad.Trans 
 
-import Parser ( P, program, runP )
+import Global
+import Data.Char ( isSpace )
+import Control.Monad.Except
 
+import Error
+
+import Parser ( P, program, runP )
+import AST
+
+import Control.Exception ( IOException, catch )
 
 import Options.Applicative
 import Control.Applicative ((<|>), many)
@@ -51,14 +59,17 @@ parseArgs = pure (,) <*> parseConf <*> many (argument str (metavar "FILES..."))
 
 handleFile ::  MonadCTL m => FilePath -> m()
 handleFile file = do program <- loadProgram
+                     return ()
 
+
+loadProgram = undefined
 
 handleSentences :: MonadCTL m => Program -> m()
-
+handleSentences = undefined
 
 loadFile ::  MonadCTL m => FilePath -> m Program
 loadFile file = do
-    let filename = reverse (dropWhile isSpace (reverse f))
+    let filename = reverse (dropWhile isSpace (reverse file))
     x <- liftIO $ catch (readFile filename)
                (\e -> do let err = show (e :: IOException)
                          hPutStrLn stderr ("No se pudo abrir el archivo " ++ filename ++ ": " ++ err)

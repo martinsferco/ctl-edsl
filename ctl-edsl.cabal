@@ -28,13 +28,13 @@ library
       AST
       Common
       Error
+      Eval
       Global
-      Lib
+      Model.TSystem
+      Model.TSystemMethods
       MonadCTL
       Parser
-      Reduce
       Sat
-      TSystem
       TypeCheck
   other-modules:
       Paths_ctl_edsl
