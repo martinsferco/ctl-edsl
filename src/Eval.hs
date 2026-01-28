@@ -46,7 +46,7 @@ replaceVarsFormula (SVar var)              =
         
 
 constructInfonodes :: [InfoNode] -> InfoNodes
-constructInfonodes info = (Set.fromList initialNodes, transFunction)
+constructInfonodes info = InfoNodes (Set.fromList initialNodes) transFunction
   where 
     initialNodes = map (\(n, _, _) -> n) (filter (\(_, initial, _) -> initial) info) 
     transFunction = collectByNodes (map (\(n, _, neigh) -> (n,neigh)) info)

@@ -25,4 +25,9 @@ type TransitionFunction = Map.Map NodeIdent Nodes
 type LabelingFunction   = Map.Map NodeIdent Atoms
 
 -- Initial nodes and transition function
-type InfoNodes = (Nodes, TransitionFunction)
+data InfoNodes = InfoNodes
+  {
+    initialNodes :: Nodes,
+    transitions :: TransitionFunction
+  }
+  deriving (Show, Eq)

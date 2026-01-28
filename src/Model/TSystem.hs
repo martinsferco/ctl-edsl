@@ -12,8 +12,8 @@ data TSystem = TSystem
 
 data Graph = Graph
   {
-    nodes        :: Nodes,
-    initialNodes :: Nodes,
-    transitions  :: TransitionFunction
+    nodes :: Nodes,
+    inits :: Nodes,
+    trans :: TransitionFunction
   }
   deriving (Show, Eq)
