@@ -1,15 +1,15 @@
 module AST where
 
-import TSystem
 import Common
+import Model.TSystem
 
 
 data Type
-   = ModelTy
-   | LabelsTy
-   | TransitionsTy
-   | FormulaTy
-   deriving (Show, Eq)
+  = ModelTy
+  | LabelsTy
+  | NodesTy
+  | FormulaTy
+  deriving (Show, Eq)
 
 
 data UQuantifier -- Temporal unary quantifiers
@@ -32,17 +32,15 @@ data BinaryOp
   | Implies
   deriving (Show, Eq)
 
-type Label = (NodeIdent, [AtomIdent])
-type Neighboors = [NodeIdent]
-type Transition = (NodeIdent, Bool, Neighboors)
 
 data Expr 
   = FormulaExpr SFormula   
   | ModelExpr Expr Expr
-  | LabelExpr [Label]
-  | TransitionExpr [Transition]
+  | LabelsExpr [Label]
+  | NodesExpr [InfoNode]
   | VarExpr VarIdent
   deriving (Show, Eq)
+
 
 data SFormula
   = SF
@@ -55,6 +53,7 @@ data SFormula
   | SVar VarIdent
   deriving (Show, Eq)
 
+
 data Formula
   = F
   | T
@@ -65,19 +64,22 @@ data Formula
   | BQuantifier BQuantifier Formula Formula
   deriving (Show, Eq)
 
+
 data Sentence 
   = Def VarIdent Type Expr
-  | Export Expr
-  | IsValid Expr
-  | Models Expr Expr
-  -- | ModelsNode Expr NodeIdent Expr
+  | Export Expr  
+  | IsValid Expr                      --     |= p
+  | Models Expr Expr                  -- M   |= p
+  -- | ModelsNode Expr NodeIdent Expr -- M,s |= p
   deriving (Show, Eq)
+
+
+type Program = [Sentence]
+
 
 data Value
   = Formula Formula
   | Model TSystem
-  | Labels [Label]
-  | Transitions [Transition]
+  | Labels LabelingFunction
+  | Nodes InfoNodes
   deriving (Show, Eq)
-
-type Program = [Sentence]

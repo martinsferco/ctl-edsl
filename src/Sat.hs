@@ -1,7 +1,8 @@
 module Sat where
 
 import AST
-import TSystem
+import Model.TSystem
+import Model.TSystemMethods
 import Common 
 
 import qualified Data.Set as Set

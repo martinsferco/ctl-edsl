@@ -25,7 +25,7 @@ languageDefintion = emptyDef
   , commentEnd      = "*/"
   , commentLine     = "//"
 
-  , reservedNames   = ["define", "Model", "Transitions", "Labels",
+  , reservedNames   = ["define", "Model", "Nodes", "Labels",
                        "Formula", "export", "isValid", "F", "T", "A", "E", "U", "o"]
   , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "<>", "->", ","]
   }
@@ -83,20 +83,20 @@ nodeIdent = try $ do
 typeParser :: P Type
 typeParser = try (reserved "Model"       >> return ModelTy)       <|>
              try (reserved "Labels"      >> return LabelsTy)      <|>
-             try (reserved "Transitions" >> return TransitionsTy) <|>
+             try (reserved "Nodes" >> return NodesTy) <|>
              try (reserved "Formula"     >> return FormulaTy) 
 
 
 
 expr :: P Expr
-expr = try labelsExpr      <|>
-       try modelExpr       <|>
-       try transitionsExpr <|>
-       try varExpr         <|>
+expr = try labelsExpr <|>
+       try modelExpr  <|>
+       try nodesExpr  <|>
+       try varExpr    <|>
        formulaExpr
 
 labelsExpr :: P Expr 
-labelsExpr = LabelExpr <$> braces (many labelsExprAux)
+labelsExpr = LabelsExpr <$> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
                            label <- braces $ commaSep atomIdent
@@ -106,15 +106,15 @@ modelExpr :: P Expr
 modelExpr = angles modelExprAux
   where modelExprAux = do transExpr <- expr
                           reservedOp ","
-                          labelExpr <- expr
-                          return $ ModelExpr transExpr labelExpr
+                          labelsExpr <- expr
+                          return $ ModelExpr transExpr labelsExpr
 
-transitionsExpr :: P Expr
-transitionsExpr = TransitionExpr <$> braces (many transitionsExprAux)
-  where transitionsExprAux = do (node, isInitial) <- parseNode
-                                reservedOp "=>"
-                                neighboors <- braces $ commaSep nodeIdent
-                                return (node, isInitial, neighboors) 
+nodesExpr :: P Expr
+nodesExpr = NodesExpr <$> braces (many nodesExprAux)
+  where nodesExprAux = do  (node, isInitial) <- parseNode
+                           reservedOp "=>"
+                           neighboors <- braces $ commaSep nodeIdent
+                           return (node, isInitial, neighboors) 
 
         parseNode = try (do node <- parens nodeIdent ; return (node, True)) <|>
                         (do node <- nodeIdent        ; return (node, False))

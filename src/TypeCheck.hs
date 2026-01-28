@@ -16,11 +16,11 @@ expectType ty1 ty2 = if ty1 == ty2 then return ()
                                    else failCTL "no matchean los tipos"
 
 findType :: MonadCTL m => Expr -> m Type
-findType (ModelExpr t l)   = do ofType t TransitionsTy
+findType (ModelExpr t l)   = do ofType t NodesTy
                                 ofType l LabelsTy
                                 return ModelTy
-findType (LabelExpr _)      = return LabelsTy
-findType (TransitionExpr _) = return TransitionsTy
+findType (LabelsExpr _)      = return LabelsTy
+findType (NodesExpr _) = return NodesTy
 
 findType (VarExpr var)      = getTy var
 
