@@ -55,8 +55,8 @@ data SFormula
 
 
 data Formula
-  = F Pos
-  | T Pos
+  = F
+  | T
   | Atom AtomIdent
   | Not Formula
   | BinaryOp BinaryOp Formula Formula
@@ -68,8 +68,9 @@ data Formula
 data Sentence 
   = Def VarIdent Type Expr
   | Export Expr  
-  | IsValid Expr                      --     |= p
+  | IsSatis Expr                      --     |= p
   | Models Expr Expr                  -- M   |= p
+  | IsValid Expr NodeIdent Expr
   -- | ModelsNode Expr NodeIdent Expr -- M,s |= p
   deriving Show
 
@@ -78,8 +79,8 @@ type Program = [Sentence]
 
 
 data Value
-  = Formula Formula
-  | Model TSystem
-  | Labels LabelingFunction
-  | Nodes InfoNodes
+  = Formula { formula :: Formula }
+  | Model   { model   :: TSystem }
+  | Labels  { labels  :: LabelingFunction }
+  | Nodes   { nodes   :: InfoNodes }
   deriving Show

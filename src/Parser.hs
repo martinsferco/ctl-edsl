@@ -26,7 +26,7 @@ languageDefintion = emptyDef
   , commentLine     = "//"
 
   , reservedNames   = ["define", "Model", "Nodes", "Labels",
-                       "Formula", "export", "isValid", "F", "T", "A", "E", "U", "o"]
+                       "Formula", "export", "F", "T", "A", "E", "U", "o"]
   , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "<>", "->", ","]
   }
 
@@ -170,10 +170,11 @@ atomicTerm =  try (parens formulaExpr')       <|>
 
 
 sentence :: P Sentence
-sentence = try defSentence    <|> 
-           try exportSentence <|>
-           try modelsSentence <|>
-           isValidSentence 
+sentence = try defSentence     <|> 
+           try exportSentence  <|>
+           try modelsSentence  <|>
+           try isValidSentence <|>
+           isSatisSentence 
 
 defSentence :: P Sentence
 defSentence = do reserved "define"
@@ -194,8 +195,15 @@ modelsSentence = do model <- expr
                     return $ Models model formula
 
 isValidSentence :: P Sentence
-isValidSentence = reserved "isValid" >> (IsValid <$> expr)
+isValidSentence = do  model <- expr
+                      reservedOp ","
+                      node <- nodeIdent
+                      reservedOp "|="
+                      formula <- expr
+                      return $ IsValid model node formula
 
+isSatisSentence :: P Sentence
+isSatisSentence = reservedOp "|=" >> (IsSatis <$> expr)
 
 
 ---------------------------------------
