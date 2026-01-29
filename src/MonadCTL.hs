@@ -83,6 +83,9 @@ modelError s = throwError (ModelError s)
 stateError :: MonadCTL m => String -> m a
 stateError s = throwError (StateError s)
 
+satError :: MonadCTL m => String -> m a
+satError s = throwError (SatError s)
+
 instance MonadCTL CTL
 
 runCTL' :: CTL a -> Conf -> IO (Either Error (a, GState))
