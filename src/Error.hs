@@ -9,6 +9,7 @@ data Error
   | StateError String
   | ModelError String
   | GeneralError String 
+  | SatError String
 
 
   
@@ -19,3 +20,4 @@ instance Show Error where
   show (StateError s)     = "state error: " ++ s
   show (ModelError s)     = "model error: " ++ s
   show (GeneralError s)   = "general error: " ++ s
+  show (SatError s)       = "sat error: " ++ s 
