@@ -8,10 +8,14 @@ data Error
   | RuntimeError String 
   | StateError String
   | ModelError String
+  | GeneralError String 
 
+
+  
 instance Show Error where
   show (ParseErr e)       = show e
   show (TypecheckError s) = "type check error: " ++ s
   show (RuntimeError s)   = "runtime  error: " ++ s
   show (StateError s)     = "state error: " ++ s
   show (ModelError s)     = "model error: " ++ s
+  show (GeneralError s)   = "general error: " ++ s

@@ -67,8 +67,21 @@ selectDefinition select var = do
 matchsName :: VarIdent -> (VarIdent, Type, Value) -> Bool
 matchsName var (varId, _, _) = var == varId
 
+
 failCTL :: MonadCTL m => String -> m a
-failCTL = undefined
+failCTL s = throwError (GeneralError s)
+
+typeError :: MonadCTL m => String -> m a
+typeError s = throwError (TypecheckError s)
+
+runtimeError :: MonadCTL m => String -> m a
+runtimeError s = throwError (RuntimeError s)
+
+modelError :: MonadCTL m => String -> m a
+modelError s = throwError (ModelError s)
+
+stateError :: MonadCTL m => String -> m a
+stateError s = throwError (StateError s)
 
 instance MonadCTL CTL
 
