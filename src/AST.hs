@@ -19,18 +19,18 @@ data UQuantifier -- Temporal unary quantifiers
   | ER -- Possible
   | AS -- Invariant
   | ES -- Invariant for some trace
-  deriving (Show, Eq)
+  deriving Show
 
 data BQuantifier -- Temporal binary quantifiers
   = AU -- Forall until
   | EU -- Exists until
-  deriving (Show, Eq)
+  deriving Show
 
 data BinaryOp
   = And
   | Or
   | Implies
-  deriving (Show, Eq)
+  deriving Show
 
 
 data Expr 
@@ -39,30 +39,30 @@ data Expr
   | LabelsExpr [Label]
   | NodesExpr [InfoNode]
   | VarExpr VarIdent
-  deriving (Show, Eq)
+  deriving Show
 
 
 data SFormula
-  = SF
-  | ST
+  = SF 
+  | ST 
   | SAtom AtomIdent
   | SNot SFormula
   | SBinaryOp BinaryOp SFormula SFormula
   | SUQuantifier UQuantifier SFormula
   | SBQuantifier BQuantifier SFormula SFormula
   | SVar VarIdent
-  deriving (Show, Eq)
+  deriving Show
 
 
 data Formula
-  = F
-  | T
+  = F Pos
+  | T Pos
   | Atom AtomIdent
   | Not Formula
   | BinaryOp BinaryOp Formula Formula
   | UQuantifier UQuantifier Formula
   | BQuantifier BQuantifier Formula Formula
-  deriving (Show, Eq)
+  deriving Show
 
 
 data Sentence 
@@ -71,7 +71,7 @@ data Sentence
   | IsValid Expr                      --     |= p
   | Models Expr Expr                  -- M   |= p
   -- | ModelsNode Expr NodeIdent Expr -- M,s |= p
-  deriving (Show, Eq)
+  deriving Show
 
 
 type Program = [Sentence]
@@ -82,4 +82,4 @@ data Value
   | Model TSystem
   | Labels LabelingFunction
   | Nodes InfoNodes
-  deriving (Show, Eq)
+  deriving Show
