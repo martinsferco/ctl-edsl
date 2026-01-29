@@ -4,18 +4,49 @@ import MonadCTL
 import AST
 import Common
 
+import Sat
+
+import Model.TSystem
+import Model.TSystemMethods
+
+import TypeCheck
+
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+
+evalSentence :: MonadCTL m => Sentence -> m()
+evalSentence (Def var ty e) = do v <- reduceExpr e
+                                 v `valueOfType` ty
+                                 addDef var ty v
+
+evalSentence (Export e)     = do  v <- reduceExpr e
+                                  ts <- expectsModel v
+                                  exportTSystem ts
+
+evalSentence (IsSatis e)    = do v <- reduceExpr e
+                                 formula <- expectsFormula v
+                                 isSatis formula
+
+evalSentence (Models m f)   = do vm <- reduceExpr m
+                                 ts <- expectsModel vm
+                                 vf <- reduceExpr f
+                                 form <- expectsFormula vf
+                                 ts `models` form
+
+evalSentence (IsValid m n f) = do vm <- reduceExpr m
+                                  ts <- expectsModel vm
+                                  vf <- reduceExpr f
+                                  form <- expectsFormula vf
+                                  isValid ts n form
+
 reduceExpr :: MonadCTL m => Expr -> m Value
 reduceExpr (FormulaExpr sformula)   = Formula <$> replaceVarsFormula sformula
-reduceExpr (ModelExpr trans labels) = 
-  do  vTrans <- reduceExpr trans
-      vLabels <- reduceExpr labels
-      case (vTrans, vLabels) of
-      --  (Transitions t, Labels l) -> buildTSystem t l
-       (Nodes t, Labels l) -> failCTL "ty"
-       _ -> failCTL "type error while reducing expr"
+reduceExpr (ModelExpr nodes labels) = do  vNodes <- reduceExpr nodes
+                                          infoNodes <- expectsNodes vNodes
+                                          vLabels <- reduceExpr labels
+                                          labels <- expectsLabels vLabels
+                                          Model <$> buildTSystem infoNodes labels
 
 reduceExpr (LabelsExpr labels)      = return $ Labels (collectByNodes labels)
 reduceExpr (NodesExpr nodes)        = return $ Nodes (constructInfonodes nodes)
@@ -38,18 +69,32 @@ replaceVarsFormula (SBQuantifier bq sp sq) = do p <- replaceVarsFormula sp
                                                 q <- replaceVarsFormula sq
                                                 return $ BQuantifier bq p q
 
-replaceVarsFormula (SVar var)              = 
-  do  varForm <- searchDef var
-      case varForm of 
-        (Formula f) -> return f
-        _           -> failCTL "type error while reducint the expression"
-        
+replaceVarsFormula (SVar var)              = do varForm <- searchDef var
+                                                expectsFormula varForm
+
+
 
 constructInfonodes :: [InfoNode] -> InfoNodes
 constructInfonodes info = InfoNodes (Set.fromList initialNodes) transFunction
-  where 
-    initialNodes = map (\(n, _, _) -> n) (filter (\(_, initial, _) -> initial) info) 
-    transFunction = collectByNodes (map (\(n, _, neigh) -> (n,neigh)) info)
+  where initialNodes = [ n | (n, initial, _) <- info, initial ]
+        transFunction = collectByNodes [ (n, neigh) | (n, _, neigh) <- info ]
 
 collectByNodes :: Ord b => [(NodeIdent, [b])] -> Map.Map NodeIdent (Set.Set b)
 collectByNodes = Map.fromListWith Set.union . map (\(n, bs) -> (n, Set.fromList bs))
+
+
+
+
+-- Our language has a TypeChecker, so it should not be any problem
+-- with this. We do it in case it fails.
+expectsModel :: MonadCTL m => Value -> m TSystem
+expectsModel v = v `valueOfType` ModelTy >> return (model v)
+
+expectsLabels :: MonadCTL m => Value -> m LabelingFunction
+expectsLabels v = v `valueOfType` LabelsTy >> return (labels v)
+
+expectsNodes :: MonadCTL m => Value -> m InfoNodes
+expectsNodes v = v `valueOfType` NodesTy >> return (AST.nodes v)
+
+expectsFormula :: MonadCTL m => Value -> m Formula
+expectsFormula v = v `valueOfType` FormulaTy >> return (formula v)
