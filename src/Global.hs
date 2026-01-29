@@ -1,7 +1,7 @@
 module Global where
 
 import Common
-import AST
+import Lang
 
 type Definition = (VarIdent, Type, Value)
 

@@ -1,11 +1,11 @@
 module TypeCheck where
 
-
-import AST
-import Common
 import MonadCTL
+import Common
+import Lang
 
 import qualified Data.Set as Set
+
 
 exprOfType :: MonadCTL m => Expr -> Type -> m()
 exprOfType expr ty = do exprTy <- findTypeExpr expr
@@ -63,7 +63,7 @@ freeVariables (SVar var)           = Set.singleton var
 
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
 typeCheckSentence (Def _ ty expr)        = expr `exprOfType` ty 
-typeCheckSentence (Export model)         = model `exprOfType` ModelTy
+typeCheckSentence (Export model _)       = model `exprOfType` ModelTy
 typeCheckSentence (IsSatis formula)      = formula `exprOfType` FormulaTy
 typeCheckSentence (Models model formula) = do model `exprOfType` ModelTy
                                               formula `exprOfType` FormulaTy

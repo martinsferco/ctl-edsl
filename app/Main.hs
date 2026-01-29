@@ -1,23 +1,22 @@
 module Main where
 
 import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, failCTL )
-import Control.Monad.Trans 
-
-import Global
-import Data.Char ( isSpace )
-import Control.Monad.Except
-import TypeCheck
-import Error
-
-import Eval
-
 import Parser ( P, program, runP )
-import AST
+import TypeCheck
+import Global
+import Error
+import Eval
+import Lang
 
 import Control.Exception ( IOException, catch )
+import Control.Applicative ((<|>), many)
+import Control.Monad.Except
+import Control.Monad.Trans
+
+import Data.Char ( isSpace )
 
 import Options.Applicative
-import Control.Applicative ((<|>), many)
+
 import System.Exit
 import System.IO
 

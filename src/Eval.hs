@@ -1,15 +1,12 @@
 module Eval where
 
-import MonadCTL
-import AST
-import Common
-
-import Sat
-
-import Model.TSystem
 import Model.TSystemMethods
-
+import Model.TSystem
 import TypeCheck
+import MonadCTL
+import Common
+import Lang
+import Sat
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -20,9 +17,9 @@ evalSentence (Def var ty e) = do v <- reduceExpr e
                                  v `valueOfType` ty
                                  addDef var ty v
 
-evalSentence (Export e)     = do  v <- reduceExpr e
+evalSentence (Export e f)   = do  v <- reduceExpr e
                                   ts <- expectsModel v
-                                  exportTSystem ts
+                                  exportTSystem ts f
 
 evalSentence (IsSatis e)    = do v <- reduceExpr e
                                  formula <- expectsFormula v
@@ -94,7 +91,7 @@ expectsLabels :: MonadCTL m => Value -> m LabelingFunction
 expectsLabels v = v `valueOfType` LabelsTy >> return (labels v)
 
 expectsNodes :: MonadCTL m => Value -> m InfoNodes
-expectsNodes v = v `valueOfType` NodesTy >> return (AST.nodes v)
+expectsNodes v = v `valueOfType` NodesTy >> return (Lang.nodes v)
 
 expectsFormula :: MonadCTL m => Value -> m Formula
 expectsFormula v = v `valueOfType` FormulaTy >> return (formula v)

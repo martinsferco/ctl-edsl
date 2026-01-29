@@ -1,14 +1,14 @@
 module Parser where
 
-import AST 
 import Common
-
-import Text.Parsec hiding (runP, parse)
+import Lang 
 
 import qualified Text.Parsec.Token as Tok
-import Text.ParserCombinators.Parsec.Language 
-import Control.Monad (guard)
+import           Text.Parsec hiding (runP, parse)
+import           Text.ParserCombinators.Parsec.Language 
+
 import Data.Char (isLower, isUpper)
+import Control.Monad (guard)
 
 type P = Parsec String ()
 
@@ -26,7 +26,7 @@ languageDefintion = emptyDef
   , commentLine     = "//"
 
   , reservedNames   = ["define", "Model", "Nodes", "Labels",
-                       "Formula", "export", "F", "T", "A", "E", "U"]
+                       "Formula", "export", "F", "T", "A", "E", "U", "as"]
   , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()", "<>", "->", ","]
   }
 
@@ -89,8 +89,8 @@ typeParser = try (reserved "Model"       >> return ModelTy)       <|>
 
 
 expr :: P Expr
-expr = try labelsExpr <|>
-       try modelExpr  <|>
+expr = try modelExpr  <|>
+       try labelsExpr <|>
        try nodesExpr  <|>
        try varExpr    <|>
        formulaExpr
@@ -110,7 +110,7 @@ modelExpr = angles modelExprAux
                           return $ ModelExpr transExpr labelsExpr
 
 nodesExpr :: P Expr
-nodesExpr = NodesExpr <$> braces (many nodesExprAux)
+nodesExpr = NodesExpr <$> braces (many1 nodesExprAux)
   where nodesExprAux = do  (node, isInitial) <- parseNode
                            reservedOp "=>"
                            neighboors <- braces $ commaSep nodeIdent
@@ -186,7 +186,11 @@ defSentence = do reserved "define"
                  return $ Def var varType varExpr 
 
 exportSentence :: P Sentence 
-exportSentence = reserved "export" >> (Export <$> expr)
+exportSentence = do reserved "export" 
+                    model <- expr
+                    reserved "as"
+                    fileName <- identifier
+                    return $ Export model fileName
 
 modelsSentence :: P Sentence 
 modelsSentence = do model <- expr

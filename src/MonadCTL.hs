@@ -1,22 +1,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
--- {-# OPTIONS_GHC -Wno-name-shadowing #-}
--- {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
--- {-# HLINT ignore "Use <$>" #-}
+
 
 module MonadCTL  where
 
 import Error
 import Common
-import AST
+import Lang
 import Global
 
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Reader
 import System.IO
-
-
 
 
 class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m) 

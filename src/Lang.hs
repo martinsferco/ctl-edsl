@@ -1,7 +1,7 @@
-module AST where
+module Lang where
 
-import Common
 import Model.TSystem
+import Common
 
 
 data Type
@@ -67,7 +67,7 @@ data Formula
 
 data Sentence 
   = Def VarIdent Type Expr
-  | Export Expr  
+  | Export Expr String
   | IsSatis Expr                      --     |= p
   | Models Expr Expr                  -- M   |= p
   | IsValid Expr NodeIdent Expr

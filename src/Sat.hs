@@ -1,12 +1,13 @@
 module Sat where
 
-import AST
-import Model.TSystem
 import Model.TSystemMethods
-import Common 
+import Model.TSystem
 import MonadCTL
+import Common 
+import Lang
 
 import Control.Monad (filterM, join)
+
 import qualified Data.Set as Set
 
 

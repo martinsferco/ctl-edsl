@@ -40,6 +40,8 @@ library:
   - optparse-applicative
   - containers
   - parsec
+  - graphviz
+  - text
 
 executables:
   ctl-edsl-exe:

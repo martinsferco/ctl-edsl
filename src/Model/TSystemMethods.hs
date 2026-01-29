@@ -6,16 +6,16 @@ import Common
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (intercalate)
+import Data.List ( intercalate )
 
 import Control.Monad.IO.Class
+import Control.Monad (unless)
 
 import Data.GraphViz
 import Data.GraphViz.Commands
 import Data.GraphViz.Attributes.Complete
 import Data.Text.Lazy (pack)
 
-import Control.Monad (unless)
 
 buildTSystem :: MonadCTL m => InfoNodes -> LabelingFunction -> m TSystem
 buildTSystem infoNodes labeling = 
