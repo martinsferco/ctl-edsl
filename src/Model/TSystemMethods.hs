@@ -6,6 +6,14 @@ import Common
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.List (intercalate)
+
+import Control.Monad.IO.Class
+
+import Data.GraphViz
+import Data.GraphViz.Commands
+import Data.GraphViz.Attributes.Complete
+import Data.Text.Lazy (pack)
 
 import Control.Monad (unless)
 
@@ -62,5 +70,44 @@ nonBlockingGraph graph = if nonBlocking then return ()
 
 
 
-exportTSystem :: MonadCTL m => TSystem -> m ()
-exportTSystem ts = return ()
+exportTSystem :: MonadCTL m => TSystem -> String -> m ()
+exportTSystem ts fileName = 
+  do exportedGraph <- buildExportedTSystem ts
+     liftIO $ runGraphviz exportedGraph Pdf (fileName ++ fileExtension)
+     printCTL "Grafo exportado!"
+  where 
+    fileExtension = ".pdf"
+
+
+buildExportedTSystem :: MonadCTL m => TSystem -> m (DotGraph NodeIdent)
+buildExportedTSystem ts = 
+  do  exportesNodes <- buildExportedNodes ts
+      exportedEdges <- buildExportedEdges ts
+      return $ graphElemsToDot paramsExport exportesNodes exportedEdges
+      
+  where 
+    paramsExport = nonClusteredParams
+      { fmtNode = \(n, (label, initial)) -> [ Label (StrLabel $ pack label),
+                                              Shape (if initial then DoubleCircle else Circle) ]
+      , fmtEdge = const []
+      }
+
+type ExportedNode = (NodeIdent, (String, Bool))
+type ExportedEdge = (NodeIdent, NodeIdent, ())
+
+buildExportedNodes :: MonadCTL m => TSystem -> m [ExportedNode]
+buildExportedNodes ts = return $ map buildNode (Set.toList $ getNodes ts)
+  where buildNode :: NodeIdent -> ExportedNode
+        buildNode node = let initial = node `Set.member` (getInitialNodes ts)
+                             label = buildLabel (labeling ts) node
+                         in (node, (label, initial))
+
+buildExportedEdges :: MonadCTL m => TSystem -> m [ExportedEdge]
+buildExportedEdges ts = concat <$> mapM buildTransitions (Set.toList $ getNodes ts) 
+  where buildTransitions :: MonadCTL m => NodeIdent -> m [ExportedEdge]
+        buildTransitions node = map (\n -> (node, n, ())) <$> (Set.toList <$> getNeighboors ts node)
+
+
+buildLabel :: LabelingFunction -> NodeIdent -> String
+buildLabel labeling node = intercalate "," (Set.toList $ labeling Map.! node)
+
