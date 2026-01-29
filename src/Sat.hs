@@ -5,7 +5,26 @@ import Model.TSystem
 import Model.TSystemMethods
 import Common 
 
+import MonadCTL
+
 import qualified Data.Set as Set
+
+
+models :: MonadCTL m => TSystem -> Formula -> m ()
+models ts form = let satNodes = sat ts form
+                 in if getInitialNodes ts `Set.isSubsetOf` satNodes
+                    then printCTL "the model models the formula"
+                    else printCTL "the model does not models the formula"
+
+isSatis :: MonadCTL m => Formula -> m ()
+isSatis form = failCTL "isSatis is not implemented"
+
+isValid :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m ()
+isValid ts node form = let satNodes = sat ts form
+                       in if node `Set.member` satNodes
+                          then printCTL "is valid"
+                          else printCTL "is not valid" 
+
 
 
 sat :: TSystem -> Formula -> Nodes
@@ -22,14 +41,12 @@ sat ts = (sat' ts) . transform
     sat' m (BQuantifier EU p q) = exUntil ts (sat ts p) (sat ts q)
     sat' _ _                    = error "It should be transformed already"
 
--- counterExample ::  TSystem -> Formula
--- counterExample = undefined
-
 
 transform :: Formula -> Formula
 transform F                      = F
 transform T                      = T
 transform a@(Atom _)             = a
+transform (Not p)                = Not (transform p)
 transform (BinaryOp And p q)     = BinaryOp And (transform p) (transform q)
 
 transform (BinaryOp Or p q)      = let tp = Not (transform p)
