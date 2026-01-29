@@ -16,8 +16,8 @@ valueOfType value ty = do valueTy <- findTypeValue value
                           expectType valueTy ty
 
 expectType :: MonadCTL m => Type -> Type -> m()      
-expectType ty1 ty2 = if ty1 == ty2 then failCTL "jeje"
-                                   else failCTL "no matchean los tipos"
+expectType ty1 ty2 = if ty1 == ty2 then return ()
+                                   else typeError "types do not match"
 
 findTypeExpr :: MonadCTL m => Expr -> m Type
 findTypeExpr (ModelExpr t l)   = do exprOfType t NodesTy
@@ -67,3 +67,5 @@ typeCheckSentence (Export model)         = model `exprOfType` ModelTy
 typeCheckSentence (IsSatis formula)      = formula `exprOfType` FormulaTy
 typeCheckSentence (Models model formula) = do model `exprOfType` ModelTy
                                               formula `exprOfType` FormulaTy
+typeCheckSentence (IsValid model _ form) = do model `exprOfType` ModelTy
+                                              form `exprOfType` FormulaTy
