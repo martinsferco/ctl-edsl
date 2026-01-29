@@ -26,8 +26,8 @@ languageDefintion = emptyDef
   , commentLine     = "//"
 
   , reservedNames   = ["define", "Model", "Nodes", "Labels",
-                       "Formula", "export", "F", "T", "A", "E", "U", "o"]
-  , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "<>", "->", ","]
+                       "Formula", "export", "F", "T", "A", "E", "U"]
+  , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()", "<>", "->", ","]
   }
 
 whiteSpace :: P ()
@@ -139,8 +139,8 @@ andTerm :: P SFormula
 andTerm = try unaryQuantifier <|> binaryQuantifier
 
 unaryQuantifier :: P SFormula
-unaryQuantifier = try (reserved "A" >> reserved   "o"  >> SUQuantifier AC <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reserved   "o"  >> SUQuantifier EC <$> unaryQuantifier) <|>
+unaryQuantifier = try (reserved "A" >> reservedOp "()"  >> SUQuantifier AC <$> unaryQuantifier) <|>
+                  try (reserved "E" >> reservedOp "()"  >> SUQuantifier EC <$> unaryQuantifier) <|>
                   try (reserved "A" >> reservedOp "<>" >> SUQuantifier AR <$> unaryQuantifier) <|>
                   try (reserved "E" >> reservedOp "<>" >> SUQuantifier ER <$> unaryQuantifier) <|>
                   try (reserved "A" >> reservedOp "[]" >> SUQuantifier AS <$> unaryQuantifier) <|>
@@ -201,6 +201,8 @@ isValidSentence = do  model <- expr
                       reservedOp "|="
                       formula <- expr
                       return $ IsValid model node formula
+ 
+
 
 isSatisSentence :: P Sentence
 isSatisSentence = reservedOp "|=" >> (IsSatis <$> expr)
