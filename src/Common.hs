@@ -3,7 +3,7 @@ module Common where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
--- Identifiers
+-- Identifiers of Variables, Atoms and Nodes
 type VarIdent = String
 type AtomIdent = String
 type NodeIdent = String
@@ -13,14 +13,12 @@ type Vars  = Set.Set VarIdent
 type Atoms = Set.Set AtomIdent
 type Nodes = Set.Set NodeIdent
 
--- 
+-- Useful for the parsers' definitions
 type Label = (NodeIdent, [AtomIdent])
 type Neighboors = [NodeIdent]
 type InfoNode = (NodeIdent, Bool, Neighboors)
 
--- Definition store in the monad's state
-
--- Useful for TSystem definition
+-- Useful for TSystem and Graph definitions
 type TransitionFunction = Map.Map NodeIdent Nodes
 type LabelingFunction   = Map.Map NodeIdent Atoms
 
