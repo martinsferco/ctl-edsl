@@ -1,13 +1,15 @@
 module Main where
 
-import MonadCTL ( MonadCTL, CTL, runCTL )
+import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, failCTL )
 import Control.Monad.Trans 
 
 import Global
 import Data.Char ( isSpace )
 import Control.Monad.Except
-
+import TypeCheck
 import Error
+
+import Eval
 
 import Parser ( P, program, runP )
 import AST
@@ -18,7 +20,6 @@ import Options.Applicative
 import Control.Applicative ((<|>), many)
 import System.Exit
 import System.IO
-
 
 
 main :: IO ()
@@ -58,17 +59,15 @@ parseArgs = pure (,) <*> parseConf <*> many (argument str (metavar "FILES..."))
 
 
 handleFile ::  MonadCTL m => FilePath -> m()
-handleFile file = do program <- loadProgram
-                     return ()
+handleFile file = loadProgram file >>= handleProgram 
 
+handleProgram :: MonadCTL m => Program -> m()
+handleProgram []              = return ()
+handleProgram (sentence : xs) = do handleSentence sentence
+                                   handleProgram xs
 
-loadProgram = undefined
-
-handleSentences :: MonadCTL m => Program -> m()
-handleSentences = undefined
-
-loadFile ::  MonadCTL m => FilePath -> m Program
-loadFile file = do
+loadProgram ::  MonadCTL m => FilePath -> m Program
+loadProgram file = do
     let filename = reverse (dropWhile isSpace (reverse file))
     x <- liftIO $ catch (readFile filename)
                (\e -> do let err = show (e :: IOException)
@@ -84,4 +83,5 @@ parseIO filename p x = case runP p x filename of
 
 
 handleSentence :: MonadCTL m => Sentence -> m()
-handleSentence s = undefined
+handleSentence sentence = do typeCheckSentence sentence
+                             evalSentence sentence
