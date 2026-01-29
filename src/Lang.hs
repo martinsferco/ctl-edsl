@@ -66,12 +66,11 @@ data Formula
 
 
 data Sentence 
-  = Def VarIdent Type Expr
-  | Export Expr String
-  | IsSatis Expr                      --     |= p
-  | Models Expr Expr                  -- M   |= p
-  | IsValid Expr NodeIdent Expr
-  -- | ModelsNode Expr NodeIdent Expr -- M,s |= p
+  = Def Pos VarIdent Type Expr
+  | Export Pos Expr String
+  | IsSatis Pos Expr                      --     |= p
+  | Models Pos Expr Expr                  -- M   |= p
+  | IsValid Pos Expr NodeIdent Expr
   deriving Show
 
 

@@ -12,30 +12,31 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 
+
 evalSentence :: MonadCTL m => Sentence -> m()
-evalSentence (Def var ty e) = do v <- reduceExpr e
-                                 v `valueOfType` ty
-                                 addDef var ty v
+evalSentence (Def _ var ty e) = do  v <- reduceExpr e
+                                    v `valueOfType` ty
+                                    addDef var ty v
 
-evalSentence (Export e f)   = do  v <- reduceExpr e
-                                  ts <- expectsModel v
-                                  exportTSystem ts f
+evalSentence (Export _ e f)   = do  v <- reduceExpr e
+                                    ts <- expectsModel v
+                                    exportTSystem ts f
 
-evalSentence (IsSatis e)    = do v <- reduceExpr e
-                                 formula <- expectsFormula v
-                                 isSatis formula
+evalSentence (IsSatis _ e)    = do  v <- reduceExpr e
+                                    formula <- expectsFormula v
+                                    isSatis formula
 
-evalSentence (Models m f)   = do vm <- reduceExpr m
-                                 ts <- expectsModel vm
-                                 vf <- reduceExpr f
-                                 form <- expectsFormula vf
-                                 ts `models` form
+evalSentence (Models _ m f)   = do  vm <- reduceExpr m
+                                    ts <- expectsModel vm
+                                    vf <- reduceExpr f
+                                    form <- expectsFormula vf
+                                    ts `models` form
 
-evalSentence (IsValid m n f) = do vm <- reduceExpr m
-                                  ts <- expectsModel vm
-                                  vf <- reduceExpr f
-                                  form <- expectsFormula vf
-                                  isValid ts n form
+evalSentence (IsValid _ m n f) = do vm <- reduceExpr m
+                                    ts <- expectsModel vm
+                                    vf <- reduceExpr f
+                                    form <- expectsFormula vf
+                                    isValid ts n form
 
 reduceExpr :: MonadCTL m => Expr -> m Value
 reduceExpr (FormulaExpr sformula)   = Formula <$> replaceVarsFormula sformula

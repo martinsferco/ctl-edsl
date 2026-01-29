@@ -60,6 +60,10 @@ commaSep = Tok.commaSep lexer
 -----------------------
 -- Parsers definitions
 -----------------------
+getPos :: P Pos
+getPos = do pos <- getPosition
+            return $ Pos (sourceLine pos)
+
 varIdent :: P VarIdent 
 varIdent = try $ do
   ident@(c:_) <- identifier
@@ -177,40 +181,44 @@ sentence = try defSentence     <|>
            isSatisSentence 
 
 defSentence :: P Sentence
-defSentence = do reserved "define"
-                 var <- varIdent
-                 reservedOp "::"
-                 varType <- typeParser
-                 reservedOp "="
-                 varExpr <- expr
-                 return $ Def var varType varExpr 
+defSentence = do  pos <- getPos
+                  reserved "define"
+                  var <- varIdent
+                  reservedOp "::"
+                  varType <- typeParser
+                  reservedOp "="
+                  varExpr <- expr
+                  return $ Def pos var varType varExpr 
 
 exportSentence :: P Sentence 
-exportSentence = do reserved "export" 
+exportSentence = do pos <- getPos
+                    reserved "export" 
                     model <- expr
                     reserved "as"
                     fileName <- identifier
-                    return $ Export model fileName
+                    return $ Export pos model fileName
 
 modelsSentence :: P Sentence 
-modelsSentence = do model <- expr
+modelsSentence = do pos <- getPos
+                    model <- expr
                     reservedOp "|="
                     formula <- expr
-                    return $ Models model formula
+                    return $ Models pos model formula
 
 isValidSentence :: P Sentence
-isValidSentence = do  model <- expr
+isValidSentence = do  pos <- getPos
+                      model <- expr
                       reservedOp ","
                       node <- nodeIdent
                       reservedOp "|="
                       formula <- expr
-                      return $ IsValid model node formula
+                      return $ IsValid pos model node formula
  
-
-
 isSatisSentence :: P Sentence
-isSatisSentence = reservedOp "|=" >> (IsSatis <$> expr)
-
+isSatisSentence = do  pos <- getPos
+                      reservedOp "|="
+                      form <- expr
+                      return $ IsSatis pos form
 
 ---------------------------------------
 -- General parsers

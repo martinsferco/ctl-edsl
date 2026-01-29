@@ -3,6 +3,13 @@ module Common where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+-- Position of a sentence inside a file
+data Pos = NoPos | Pos !Int 
+
+instance Show Pos where
+  show NoPos      = ""
+  show (Pos line) = "(Line " ++ show line ++ ")" 
+
 -- Identifiers of Variables, Atoms and Nodes
 type VarIdent = String
 type AtomIdent = String

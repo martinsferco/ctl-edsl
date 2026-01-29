@@ -62,10 +62,10 @@ freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
 freeVariables (SVar var)           = Set.singleton var
 
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
-typeCheckSentence (Def _ ty expr)        = expr `exprOfType` ty 
-typeCheckSentence (Export model _)       = model `exprOfType` ModelTy
-typeCheckSentence (IsSatis formula)      = formula `exprOfType` FormulaTy
-typeCheckSentence (Models model formula) = do model `exprOfType` ModelTy
-                                              formula `exprOfType` FormulaTy
-typeCheckSentence (IsValid model _ form) = do model `exprOfType` ModelTy
-                                              form `exprOfType` FormulaTy
+typeCheckSentence (Def _ _ ty expr)        = expr `exprOfType` ty 
+typeCheckSentence (Export _ model _)       = model `exprOfType` ModelTy
+typeCheckSentence (IsSatis _ formula)      = formula `exprOfType` FormulaTy
+typeCheckSentence (Models _ model formula) = do model `exprOfType` ModelTy
+                                                formula `exprOfType` FormulaTy
+typeCheckSentence (IsValid _ model _ form) = do model `exprOfType` ModelTy
+                                                form `exprOfType` FormulaTy
