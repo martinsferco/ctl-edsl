@@ -9,6 +9,7 @@ import Common
 import Lang
 import Global
 
+import Control.Monad (unless)
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -36,7 +37,7 @@ addDef var ty val = do
     notExists var = do
       s <- get
       case filter (matchsName var) (definitions s) of 
-        _ : _ -> failCTL ("variable " ++ var ++ " is not defined.")
+        _ : _ -> failCTL ("variable " ++ var ++ " is already defined.")
         []    -> return ()
 
 
@@ -65,6 +66,10 @@ failPosCTL p s = throwError (GeneralError p s)
 
 failCTL :: MonadCTL m => String -> m a
 failCTL s = throwError (GeneralError NoPos s)
+
+unlessCTL :: MonadCTL m => m Bool -> m () -> m ()
+unlessCTL mb action = mb >>= (\b -> unless b action)
+
 
 type CTL = ReaderT Conf (StateT GState (ExceptT Error IO))
 

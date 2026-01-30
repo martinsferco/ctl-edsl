@@ -26,7 +26,7 @@ buildTSystem infoNodes labeling =
 
 labelCoherence :: MonadCTL m => Graph -> LabelingFunction -> m ()
 labelCoherence graph labels = unless (Map.keysSet labels `Set.isSubsetOf` nodes graph)
-                                      (failCTL "a labeling function is refering to a node not defined in the graph")
+                                     (failCTL "Labeling function is refering to a node not defined in the graph")
 
 completeLabeling :: Graph -> LabelingFunction -> LabelingFunction
 completeLabeling graph labels = 

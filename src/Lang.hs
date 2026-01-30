@@ -34,11 +34,11 @@ data BinaryOp
 
 
 data Expr 
-  = FormulaExpr SFormula   
-  | ModelExpr Expr Expr
-  | LabelsExpr [Label]
-  | NodesExpr [InfoNode]
-  | VarExpr VarIdent
+  = FormulaExpr Pos SFormula   
+  | ModelExpr Pos Expr Expr
+  | LabelsExpr Pos [Label]
+  | NodesExpr Pos [InfoNode]
+  | VarExpr Pos VarIdent
   deriving Show
 
 

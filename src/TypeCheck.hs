@@ -4,44 +4,45 @@ import MonadCTL
 import Common
 import Lang
 
+import Control.Monad (unless)
+
 import qualified Data.Set as Set
 
 
-exprOfType :: MonadCTL m => Expr -> Type -> m()
+exprOfType :: MonadCTL m => Expr -> Type -> m Bool
 exprOfType expr ty = do exprTy <- findTypeExpr expr
-                        expectType exprTy ty
+                        return (exprTy == ty)
 
-valueOfType :: MonadCTL m => Value -> Type -> m()
-valueOfType value ty = do valueTy <- findTypeValue value
-                          expectType valueTy ty
-
-expectType :: MonadCTL m => Type -> Type -> m()      
-expectType ty1 ty2 = if ty1 == ty2 then return ()
-                                   else failCTL "types do not match"
+valueOfType :: Value -> Type -> Bool
+valueOfType value ty = findTypeValue value == ty
 
 findTypeExpr :: MonadCTL m => Expr -> m Type
-findTypeExpr (ModelExpr t l)   = do exprOfType t NodesTy
-                                    exprOfType l LabelsTy
-                                    return ModelTy
-findTypeExpr (LabelsExpr _)      = return LabelsTy
-findTypeExpr (NodesExpr _) = return NodesTy
+findTypeExpr (ModelExpr p t l)   = do unlessCTL (exprOfType t NodesTy) $
+                                        failPosCTL p "Expected a Nodes' expression."
+                                      unlessCTL (exprOfType l LabelsTy) $
+                                        failPosCTL p "Expected a Labels' expression."
+                                      return ModelTy
+                                      
+findTypeExpr (LabelsExpr _ _)    = return LabelsTy
+findTypeExpr (NodesExpr _ _)     = return NodesTy
 
-findTypeExpr (VarExpr var)      = getTy var
+findTypeExpr (VarExpr _ var)      = getTy var
 
-findTypeExpr (FormulaExpr f)   = do let fv = Set.toList $ freeVariables f
-                                    mapM_ checkFormulaVarTy fv
-                                    return FormulaTy
+findTypeExpr (FormulaExpr _ f)   = do let fv = Set.toList $ freeVariables f
+                                      mapM_ checkFormulaVarTy fv
+                                      return FormulaTy
 
     where checkFormulaVarTy :: MonadCTL m => VarIdent -> m ()
           checkFormulaVarTy var = do varTy <- getTy var
-                                     expectType varTy FormulaTy
+                                     unless (varTy == FormulaTy) 
+                                            (failCTL $ "The variable " ++ show var ++ " should refer to a Formula.")
+ 
 
-
-findTypeValue :: MonadCTL m => Value -> m Type
-findTypeValue (Model _)   = return ModelTy
-findTypeValue (Labels _)  = return LabelsTy
-findTypeValue (Formula _) = return FormulaTy
-findTypeValue (Nodes _)   = return NodesTy
+findTypeValue :: Value -> Type
+findTypeValue (Model _)   = ModelTy
+findTypeValue (Labels _)  = LabelsTy
+findTypeValue (Formula _) = FormulaTy
+findTypeValue (Nodes _)   = NodesTy
 
 freeVariables :: SFormula -> Set.Set VarIdent
 freeVariables SF                   = Set.empty
@@ -62,10 +63,22 @@ freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
 freeVariables (SVar var)           = Set.singleton var
 
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
-typeCheckSentence (Def _ _ ty expr)        = expr `exprOfType` ty 
-typeCheckSentence (Export _ model _)       = model `exprOfType` ModelTy
-typeCheckSentence (IsSatis _ formula)      = formula `exprOfType` FormulaTy
-typeCheckSentence (Models _ model formula) = do model `exprOfType` ModelTy
-                                                formula `exprOfType` FormulaTy
-typeCheckSentence (IsValid _ model _ form) = do model `exprOfType` ModelTy
-                                                form `exprOfType` FormulaTy
+typeCheckSentence (Def p _ ty expr)        = unlessCTL (expr `exprOfType` ty) $
+                                                failPosCTL p $ "The expression of the definition is not of type " ++ show ty
+
+typeCheckSentence (Export p model _)       = unlessCTL (model `exprOfType` ModelTy) $
+                                                failPosCTL p "Expected a model expression, but got a different type. You can only export models."
+
+typeCheckSentence (IsSatis p formula)      = unlessCTL (formula `exprOfType` FormulaTy) $
+                                                failPosCTL p "Expected a CTL formula, but got a different type."
+
+typeCheckSentence (Models p model formula) = do unlessCTL (model `exprOfType` ModelTy) $
+                                                    failPosCTL p $ "Expected a model expression, but got a different type."
+                                                unlessCTL (formula `exprOfType` FormulaTy) $
+                                                    failPosCTL p "Expected a CTL formula, but got a different type."
+
+typeCheckSentence (IsValid p model _ form) = do unlessCTL (model `exprOfType` ModelTy) $
+                                                    failPosCTL p "Expected a model expression, but got a different type."
+                                                unlessCTL (form `exprOfType` FormulaTy) $
+                                                    failPosCTL p "Expected a CTL formula, but got a different type."
+

@@ -100,7 +100,7 @@ expr = try modelExpr  <|>
        formulaExpr
 
 labelsExpr :: P Expr 
-labelsExpr = LabelsExpr <$> braces (many labelsExprAux)
+labelsExpr = LabelsExpr <$> getPos <*> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
                            label <- braces $ commaSep atomIdent
@@ -108,13 +108,14 @@ labelsExpr = LabelsExpr <$> braces (many labelsExprAux)
 
 modelExpr :: P Expr
 modelExpr = angles modelExprAux
-  where modelExprAux = do transExpr <- expr
+  where modelExprAux = do pos <- getPos
+                          transExpr <- expr
                           reservedOp ","
                           labelsExpr <- expr
-                          return $ ModelExpr transExpr labelsExpr
+                          return $ ModelExpr pos transExpr labelsExpr
 
 nodesExpr :: P Expr
-nodesExpr = NodesExpr <$> braces (many1 nodesExprAux)
+nodesExpr = NodesExpr <$> getPos <*> braces (many1 nodesExprAux)
   where nodesExprAux = do  (node, isInitial) <- parseNode
                            reservedOp "=>"
                            neighboors <- braces $ commaSep nodeIdent
@@ -125,10 +126,10 @@ nodesExpr = NodesExpr <$> braces (many1 nodesExprAux)
 
 
 varExpr :: P Expr 
-varExpr = VarExpr <$> varIdent
+varExpr = VarExpr <$> getPos <*> varIdent
 
 formulaExpr :: P Expr
-formulaExpr = FormulaExpr <$> formulaExpr'
+formulaExpr = FormulaExpr <$> getPos <*> formulaExpr'
   
 formulaExpr' :: P SFormula
 formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (SBinaryOp Implies))

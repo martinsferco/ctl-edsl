@@ -11,11 +11,13 @@ import Sat
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+import Control.Monad ( unless )
 
 
 evalSentence :: MonadCTL m => Sentence -> m()
 evalSentence (Def _ var ty e) = do  v <- reduceExpr e
-                                    v `valueOfType` ty
+                                    unless (v `valueOfType` ty) $
+                                      failCTL $ "Runtime error: the expression of the definition is not of type " ++ show ty
                                     addDef var ty v
 
 evalSentence (Export _ e f)   = do  v <- reduceExpr e
@@ -39,16 +41,16 @@ evalSentence (IsValid _ m n f) = do vm <- reduceExpr m
                                     isValid ts n form
 
 reduceExpr :: MonadCTL m => Expr -> m Value
-reduceExpr (FormulaExpr sformula)   = Formula <$> replaceVarsFormula sformula
-reduceExpr (ModelExpr nodes labels) = do  vNodes <- reduceExpr nodes
-                                          infoNodes <- expectsNodes vNodes
-                                          vLabels <- reduceExpr labels
-                                          labels <- expectsLabels vLabels
-                                          Model <$> buildTSystem infoNodes labels
+reduceExpr (FormulaExpr _ sformula)   = Formula <$> replaceVarsFormula sformula
+reduceExpr (ModelExpr _ nodes labels) = do  vNodes <- reduceExpr nodes
+                                            infoNodes <- expectsNodes vNodes
+                                            vLabels <- reduceExpr labels
+                                            labels <- expectsLabels vLabels
+                                            Model <$> buildTSystem infoNodes labels
 
-reduceExpr (LabelsExpr labels)      = return $ Labels (collectByNodes labels)
-reduceExpr (NodesExpr nodes)        = return $ Nodes (constructInfonodes nodes)
-reduceExpr (VarExpr var)            = searchDef var
+reduceExpr (LabelsExpr _ labels)      = return $ Labels (collectByNodes labels)
+reduceExpr (NodesExpr _ nodes)        = return $ Nodes (constructInfonodes nodes)
+reduceExpr (VarExpr _ var)            = searchDef var
 
 
 
@@ -86,13 +88,21 @@ collectByNodes = Map.fromListWith Set.union . map (\(n, bs) -> (n, Set.fromList 
 -- Our language has a TypeChecker, so it should not be any problem
 -- with this. We do it in case it fails.
 expectsModel :: MonadCTL m => Value -> m TSystem
-expectsModel v = v `valueOfType` ModelTy >> return (model v)
+expectsModel v = do unless (v `valueOfType` ModelTy) $
+                      failCTL "Runtime error: value should be of type Model."
+                    return (model v)
 
 expectsLabels :: MonadCTL m => Value -> m LabelingFunction
-expectsLabels v = v `valueOfType` LabelsTy >> return (labels v)
+expectsLabels v = do  unless (v `valueOfType` LabelsTy) $
+                        failCTL "Runtime error: value should be of type Labels."
+                      return (labels v)
 
 expectsNodes :: MonadCTL m => Value -> m InfoNodes
-expectsNodes v = v `valueOfType` NodesTy >> return (Lang.nodes v)
+expectsNodes v = do unless (v `valueOfType` NodesTy) $
+                      failCTL "Runtime error: value should be of type Nodes."
+                    return (Lang.nodes v)
 
 expectsFormula :: MonadCTL m => Value -> m Formula
-expectsFormula v = v `valueOfType` FormulaTy >> return (formula v)
+expectsFormula v = do unless (v `valueOfType` FormulaTy) $
+                        failCTL "Runtime error: value should be of type Formula."
+                      return (formula v)

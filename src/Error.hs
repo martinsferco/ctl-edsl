@@ -9,5 +9,5 @@ data Error
 
   
 instance Show Error where
-  show (ParseErr e)     = show e
-  show (GeneralError p s) = show p ++ show s
+  show (ParseErr e)      = "[Error] " ++ show e
+  show (GeneralError p s) = "[Error " ++ show p ++ "] " ++ s

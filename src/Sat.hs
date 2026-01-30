@@ -45,7 +45,7 @@ sat ts = (sat' ts) . transform
     sat' m (UQuantifier AC p)   = sat' m p >>= preForAll m
     sat' m (UQuantifier AR p)   = sat' m p >>= inev m
     sat' m (BQuantifier EU p q) = join (exUntil m <$> sat' m p <*> sat' m q)
-    sat' _ _                    = failCTL "the formula should be already trasnformed"
+    sat' _ f                    = failCTL $ "the sub-formula " ++ show f ++ " should be already trasnformed"
 
 
 transform :: Formula -> Formula
