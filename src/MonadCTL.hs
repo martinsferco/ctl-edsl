@@ -19,9 +19,6 @@ class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m)
   => MonadCTL m where
 
 
-type CTL = ReaderT Conf (StateT GState (ExceptT Error IO))
-
-
 getMode :: MonadCTL m => m Mode
 getMode = asks mode
 
@@ -39,7 +36,7 @@ addDef var ty val = do
     notExists var = do
       s <- get
       case filter (matchsName var) (definitions s) of 
-        _ : _ -> failCTL "error: existe la variable"
+        _ : _ -> failCTL ("variable " ++ var ++ " is not defined.")
         []    -> return ()
 
 
@@ -58,29 +55,18 @@ selectDefinition select var = do
   state <- get 
   case filter (matchsName var) (definitions state) of
     def : _  -> return $ select def
-    _        -> failCTL "error: no existe la variable"
+    _        -> failCTL ("variable " ++ var ++ " is not defined.")
 
 matchsName :: VarIdent -> (VarIdent, Type, Value) -> Bool
 matchsName var (varId, _, _) = var == varId
 
+failPosCTL :: MonadCTL m => Pos -> String -> m a
+failPosCTL p s = throwError (GeneralError p s)
 
 failCTL :: MonadCTL m => String -> m a
-failCTL s = throwError (GeneralError s)
+failCTL s = throwError (GeneralError NoPos s)
 
-typeError :: MonadCTL m => String -> m a
-typeError s = throwError (TypecheckError s)
-
-runtimeError :: MonadCTL m => String -> m a
-runtimeError s = throwError (RuntimeError s)
-
-modelError :: MonadCTL m => String -> m a
-modelError s = throwError (ModelError s)
-
-stateError :: MonadCTL m => String -> m a
-stateError s = throwError (StateError s)
-
-satError :: MonadCTL m => String -> m a
-satError s = throwError (SatError s)
+type CTL = ReaderT Conf (StateT GState (ExceptT Error IO))
 
 instance MonadCTL CTL
 

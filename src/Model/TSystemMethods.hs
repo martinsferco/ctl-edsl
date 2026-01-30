@@ -26,7 +26,7 @@ buildTSystem infoNodes labeling =
 
 labelCoherence :: MonadCTL m => Graph -> LabelingFunction -> m ()
 labelCoherence graph labels = unless (Map.keysSet labels `Set.isSubsetOf` nodes graph)
-                                      (modelError "a labeling function is refering to a node not defined in the graph")
+                                      (failCTL "a labeling function is refering to a node not defined in the graph")
 
 completeLabeling :: Graph -> LabelingFunction -> LabelingFunction
 completeLabeling graph labels = 
@@ -55,7 +55,7 @@ isLabel ts atom node =  node `isNodeOf` ts >>
 
 isNodeOf :: MonadCTL m => NodeIdent -> TSystem -> m ()
 isNodeOf node ts =  unless (node `Set.member` (getNodes ts))
-                           (modelError $ (show node) ++ " is not a node in the transition system")
+                           (failCTL $ (show node) ++ " is not a node in the transition system")
 
 buildGraph :: MonadCTL m => InfoNodes -> m Graph
 buildGraph (InfoNodes init trans) = return $ Graph allNodes init trans
@@ -64,7 +64,7 @@ buildGraph (InfoNodes init trans) = return $ Graph allNodes init trans
 
 nonBlockingGraph :: MonadCTL m => Graph -> m ()
 nonBlockingGraph graph = if nonBlocking then return ()
-                                        else failCTL "blocking graph"
+                                        else failCTL "trying to define a blocking graph"
   where 
     nonBlocking = nodes graph == Map.keysSet (trans graph)
 

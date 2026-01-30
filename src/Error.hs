@@ -1,23 +1,13 @@
 module Error where
 
 import Text.Parsec.Error ( ParseError )
+import Common ( Pos )
 
 data Error 
   = ParseErr ParseError
-  | TypecheckError String
-  | RuntimeError String 
-  | StateError String
-  | ModelError String
-  | GeneralError String 
-  | SatError String
-
+  | GeneralError Pos String
 
   
 instance Show Error where
-  show (ParseErr e)       = show e
-  show (TypecheckError s) = "type check error: " ++ s
-  show (RuntimeError s)   = "runtime  error: " ++ s
-  show (StateError s)     = "state error: " ++ s
-  show (ModelError s)     = "model error: " ++ s
-  show (GeneralError s)   = "general error: " ++ s
-  show (SatError s)       = "sat error: " ++ s 
+  show (ParseErr e)     = show e
+  show (GeneralError p s) = show p ++ show s

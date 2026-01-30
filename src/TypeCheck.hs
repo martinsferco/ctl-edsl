@@ -17,7 +17,7 @@ valueOfType value ty = do valueTy <- findTypeValue value
 
 expectType :: MonadCTL m => Type -> Type -> m()      
 expectType ty1 ty2 = if ty1 == ty2 then return ()
-                                   else typeError "types do not match"
+                                   else failCTL "types do not match"
 
 findTypeExpr :: MonadCTL m => Expr -> m Type
 findTypeExpr (ModelExpr t l)   = do exprOfType t NodesTy
