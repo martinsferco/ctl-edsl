@@ -1,9 +1,9 @@
 
 
 define Lab :: Labels = {
-	_n1 <= { p } 
-	_n2 <= {   }
-	_n3 <= {  }
+	_n1 <= { p,q,r,a } 
+	_n2 <= {  p }
+	_n3 <= {  p}
 }
 
 define OthersLabels :: Labels = {
@@ -21,12 +21,16 @@ define MyNodes :: Nodes = {
 }
 
 
-define NewModel :: Model = <MyNodes, Lab>
-// define OtherModel :: Model = < MyNodes, OthersLabels >
+define NewModel :: Model = <MyNodes, OthersLabels>
+define OtherModel :: Model = < MyNodes,  { }	>
+
+
 
 define NotP :: Formula = !p
 define Phi :: Formula = A [p -> q U E[] NotP]
-define Q :: Formula = E() p
+define Q :: Formula = A() p
 
-NewModel |= Q
-NewModel, _n2 |= Q
+export NewModel as myModel
+
+// NewModel |= Q
+// NewModel, _n2 |= Q
