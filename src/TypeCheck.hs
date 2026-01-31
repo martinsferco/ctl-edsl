@@ -2,6 +2,7 @@ module TypeCheck where
 
 import MonadCTL
 import Common
+import Error
 import Lang
 
 import Control.Monad (unless)
@@ -18,9 +19,9 @@ valueOfType value ty = findTypeValue value == ty
 
 findTypeExpr :: MonadCTL m => Expr -> m Type
 findTypeExpr (ModelExpr p t l)   = do unlessCTL (exprOfType t NodesTy) $
-                                        failPosCTL p "Expected a Nodes' expression."
+                                        failPosCTL p (expectedMsg NodesTy)
                                       unlessCTL (exprOfType l LabelsTy) $
-                                        failPosCTL p "Expected a Labels' expression."
+                                        failPosCTL p (expectedMsg LabelsTy)
                                       return ModelTy
                                       
 findTypeExpr (LabelsExpr _ _)    = return LabelsTy
@@ -32,10 +33,10 @@ findTypeExpr (FormulaExpr _ f)   = do let fv = Set.toList $ freeVariables f
                                       mapM_ checkFormulaVarTy fv
                                       return FormulaTy
 
-    where checkFormulaVarTy :: MonadCTL m => VarIdent -> m ()
-          checkFormulaVarTy var = do varTy <- getTy var
-                                     unless (varTy == FormulaTy) 
-                                            (failCTL $ "The variable " ++ show var ++ " should refer to a Formula.")
+    where   checkFormulaVarTy :: MonadCTL m => VarIdent -> m ()
+            checkFormulaVarTy var = do varTy <- getTy var
+                                       unless (varTy == FormulaTy) $ 
+                                               failCTL (incorrectVarMsg var FormulaTy)
  
 
 findTypeValue :: Value -> Type
@@ -63,22 +64,22 @@ freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
 freeVariables (SVar var)           = Set.singleton var
 
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
-typeCheckSentence (Def p _ ty expr)        = unlessCTL (expr `exprOfType` ty) $
-                                                failPosCTL p $ "The expression of the definition is not of type " ++ show ty
+typeCheckSentence (Def p v ty expr)        = unlessCTL (expr `exprOfType` ty) $
+                                                failPosCTL p $ (notOfTypeMsg v ty)
 
 typeCheckSentence (Export p model _)       = unlessCTL (model `exprOfType` ModelTy) $
-                                                failPosCTL p "Expected a model expression, but got a different type. You can only export models."
+                                                failPosCTL p (expectedMsg ModelTy)
 
 typeCheckSentence (IsSatis p formula)      = unlessCTL (formula `exprOfType` FormulaTy) $
-                                                failPosCTL p "Expected a CTL formula, but got a different type."
+                                                failPosCTL p (expectedMsg FormulaTy)
 
 typeCheckSentence (Models p model formula) = do unlessCTL (model `exprOfType` ModelTy) $
-                                                    failPosCTL p $ "Expected a model expression, but got a different type."
+                                                    failPosCTL p $ (expectedMsg ModelTy)
                                                 unlessCTL (formula `exprOfType` FormulaTy) $
-                                                    failPosCTL p "Expected a CTL formula, but got a different type."
+                                                    failPosCTL p (expectedMsg FormulaTy)
 
 typeCheckSentence (IsValid p model _ form) = do unlessCTL (model `exprOfType` ModelTy) $
-                                                    failPosCTL p "Expected a model expression, but got a different type."
+                                                    failPosCTL p (expectedMsg ModelTy)
                                                 unlessCTL (form `exprOfType` FormulaTy) $
-                                                    failPosCTL p "Expected a CTL formula, but got a different type."
+                                                    failPosCTL p (expectedMsg FormulaTy)
 

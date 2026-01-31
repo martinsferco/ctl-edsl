@@ -5,6 +5,7 @@ import Model.TSystem
 import TypeCheck
 import MonadCTL
 import Common
+import Error
 import Lang
 import Sat
 
@@ -17,7 +18,7 @@ import Control.Monad ( unless )
 evalSentence :: MonadCTL m => Sentence -> m()
 evalSentence (Def _ var ty e) = do  v <- reduceExpr e
                                     unless (v `valueOfType` ty) $
-                                      failCTL $ "Runtime error: the expression of the definition is not of type " ++ show ty
+                                      failCTL $ ("Runtime error: " ++ notOfTypeMsg var ty)
                                     addDef var ty v
 
 evalSentence (Export _ e f)   = do  v <- reduceExpr e
@@ -89,20 +90,20 @@ collectByNodes = Map.fromListWith Set.union . map (\(n, bs) -> (n, Set.fromList 
 -- with this. We do it in case it fails.
 expectsModel :: MonadCTL m => Value -> m TSystem
 expectsModel v = do unless (v `valueOfType` ModelTy) $
-                      failCTL "Runtime error: value should be of type Model."
+                      failCTL ("Runtime error: " ++ expectedMsg ModelTy)
                     return (model v)
 
 expectsLabels :: MonadCTL m => Value -> m LabelingFunction
 expectsLabels v = do  unless (v `valueOfType` LabelsTy) $
-                        failCTL "Runtime error: value should be of type Labels."
+                        failCTL ("Runtime error: " ++ expectedMsg LabelsTy)
                       return (labels v)
 
 expectsNodes :: MonadCTL m => Value -> m InfoNodes
 expectsNodes v = do unless (v `valueOfType` NodesTy) $
-                      failCTL "Runtime error: value should be of type Nodes."
+                      failCTL ("Runtime error: " ++ expectedMsg NodesTy)
                     return (Lang.nodes v)
 
 expectsFormula :: MonadCTL m => Value -> m Formula
 expectsFormula v = do unless (v `valueOfType` FormulaTy) $
-                        failCTL "Runtime error: value should be of type Formula."
+                        failCTL ("Runtime error: " ++ expectedMsg FormulaTy)
                       return (formula v)
