@@ -26,11 +26,6 @@ isValid ts node form = do satNodes <- sat ts form
                           then printCTL "is valid"
                           else printCTL "is not valid" 
 
-counterExample :: t
-counterExample = undefined
-
-witness :: t 
-witness = undefined
 
 sat :: MonadCTL m => TSystem -> Formula -> m Nodes
 sat ts = (sat' ts) . transform
@@ -139,3 +134,31 @@ getAtoms (BQuantifier _ p q) = Set.union (getAtoms p) (getAtoms q)
 setFilterM :: (Ord a, MonadCTL m) => (a -> m Bool) -> Set.Set a -> m (Set.Set a)
 setFilterM p = fmap Set.fromList . filterM p . Set.toList
   
+
+
+-- yo necesito 
+--   - una formula
+--   - nodos de sat
+--   - tsystem
+
+-- necesito devolver como un 'DTO' para que despues pueda ser PPrinteado
+
+-- pre
+counterExample :: Nodes -> TSystem -> Formula -> t
+counterExample satNodes ts F                       = undefined 
+counterExample satNodes ts T                       = undefined 
+counterExample satNodes ts (Atom atom )            = undefined  
+counterExample satNodes ts (Not p)                 = undefined  
+counterExample satNodes ts (BinaryOp op p q)       = undefined 
+counterExample satNodes ts (UQuantifier quant p)   = undefined 
+counterExample satNodes ts (BQuantifier quant p q) = undefined 
+
+
+witness :: Nodes -> TSystem -> Formula -> t
+witness satNodes ts F                       = undefined
+witness satNodes ts T                       = undefined
+witness satNodes ts (Atom atom )            =  undefined
+witness satNodes ts (Not p)                 = undefined
+witness satNodes ts (BinaryOp op p q)       = undefined
+witness satNodes ts (UQuantifier quant p)   = undefined
+witness satNodes ts (BQuantifier quant p q) = undefined
