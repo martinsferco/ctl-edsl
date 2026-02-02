@@ -143,8 +143,15 @@ setFilterM p = fmap Set.fromList . filterM p . Set.toList
 
 -- necesito devolver como un 'DTO' para que despues pueda ser PPrinteado
 
--- pre
-counterExample :: Nodes -> TSystem -> Formula -> t
+--  el contraejemplo muestra un camino que hace incumplir la formula
+--  el testigo muestra un camino que hace valida la formula
+
+data CounterExample = CounterExample
+data Witness = Witness
+
+data EvalInformation = EvalInformation
+
+counterExample :: Nodes -> TSystem -> Formula -> CounterExample
 counterExample satNodes ts F                       = undefined 
 counterExample satNodes ts T                       = undefined 
 counterExample satNodes ts (Atom atom )            = undefined  
@@ -154,7 +161,7 @@ counterExample satNodes ts (UQuantifier quant p)   = undefined
 counterExample satNodes ts (BQuantifier quant p q) = undefined 
 
 
-witness :: Nodes -> TSystem -> Formula -> t
+witness :: Nodes -> TSystem -> Formula -> Witness
 witness satNodes ts F                       = undefined
 witness satNodes ts T                       = undefined
 witness satNodes ts (Atom atom )            =  undefined
