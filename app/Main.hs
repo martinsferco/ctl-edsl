@@ -1,7 +1,8 @@
 module Main where
 
-import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, failCTL )
+import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, failCTL, getMode )
 import Parser ( P, program, runP )
+import PrettyPrinter ( ppSentence )
 import TypeCheck
 import Global
 import Error
@@ -37,7 +38,9 @@ main' = execParser interpreterOpts >>= go
 
     go :: (Mode,[FilePath]) -> IO ()
     go (mode, files) = runOrFail (Conf mode) $ mapM_ handleFile files
-
+    -- despues de hacer el mapM_ handleFile files, tengo que hacer un if interactive, ejecutar el loop, si no, return ()
+    -- el loop lo voy a copiar del otro tp, y lo voy a hacer sencillo. Tengo el parser de sentences, y si no, tengo el parser
+    -- de opciones. Load, reload, type de algo, etc.
 
 runOrFail :: Conf -> CTL a -> IO a
 runOrFail conf m = do
@@ -82,5 +85,9 @@ parseIO filename p x = case runP p x filename of
 
 
 handleSentence :: MonadCTL m => Sentence -> m()
-handleSentence sentence = do typeCheckSentence sentence
-                             evalSentence sentence
+handleSentence sentence = do  typeCheckSentence sentence
+                              mode <- getMode 
+                              case mode of
+                                Interactive -> return ()
+                                TypeCheck   -> printCTL $ ppSentence sentence
+                                Eval        -> evalSentence sentence

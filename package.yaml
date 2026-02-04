@@ -42,6 +42,8 @@ library:
   - parsec
   - graphviz
   - text
+  - prettyprinter
+  - prettyprinter-ansi-terminal
 
 executables:
   ctl-edsl-exe:
