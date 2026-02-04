@@ -84,10 +84,18 @@ parseIO filename p x = case runP p x filename of
                   Right r -> return r
 
 
+
+
 handleSentence :: MonadCTL m => Sentence -> m()
 handleSentence sentence = do  typeCheckSentence sentence
-                              mode <- getMode 
+                              mode <- getMode
                               case mode of
-                                Interactive -> return ()
-                                TypeCheck   -> printCTL $ ppSentence sentence
-                                Eval        -> evalSentence sentence
+                                Interactive ->
+                                  addDefinition sentence  
+                                TypeCheck   -> do
+                                  addDefinition sentence  
+                                  printCTL $ ppSentence sentence
+                                Eval        ->
+                                   evalSentence sentence
+
+

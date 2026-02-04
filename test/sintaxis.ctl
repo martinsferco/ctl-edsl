@@ -30,7 +30,9 @@ define NotP :: Formula = !p
 define Phi :: Formula = A [p -> q U E[] NotP]
 define Q :: Formula = A() p
 
-export NewModel as myModel
+export NewModel as myMod
 
-// NewModel |= Q
-// NewModel, _n2 |= Q
+NewModel |= Q
+NewModel, _n2 |= Q
+
+|= Q

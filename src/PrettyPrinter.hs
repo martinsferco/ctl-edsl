@@ -2,220 +2,152 @@ module PrettyPrinter where
 
 import Lang
 import Common
-
 import Prettyprinter
-import Data.Text ( unpack )
 import Prettyprinter.Render.Terminal
+import Data.Text (unpack)
 
 
-------------------------------------------------------------
--- Colors
-------------------------------------------------------------
-
-typeOpColor :: Doc AnsiStyle -> Doc AnsiStyle
-typeOpColor = annotate (colorDull Blue)
-
-opColor :: Doc AnsiStyle -> Doc AnsiStyle
-opColor = annotate (colorDull Blue)
-
-quantifierColor :: Doc AnsiStyle -> Doc AnsiStyle
-quantifierColor = annotate (colorDull Blue)
-
-atomColor :: Doc AnsiStyle -> Doc AnsiStyle
-atomColor = annotate (colorDull Blue)
-
-varColor :: Doc AnsiStyle -> Doc AnsiStyle
-varColor = annotate (colorDull Blue)
-
-nodeColor :: Doc AnsiStyle -> Doc AnsiStyle
-nodeColor = annotate (colorDull Blue)
-
-keywordColor :: Doc AnsiStyle -> Doc AnsiStyle
-keywordColor = annotate (colorDull Green)
+keywordColor, typeColor, opColor, quantifierColor , atomColor, varColor, nodeColor, arrowColor, punctuationColor :: Doc AnsiStyle -> Doc AnsiStyle
+keywordColor     = annotate (color Green <> bold)
+typeColor        = annotate (color Blue <> bold)
+opColor          = annotate (color Yellow <> bold)
+quantifierColor  = annotate (color Magenta <> bold)
+atomColor        = annotate (color Cyan)
+nodeColor        = annotate (color Red)
+varColor         = annotate (color White <> bold)
+arrowColor       = annotate (color Yellow)
+punctuationColor = annotate (color White)
 
 ------------------------------------------------------------
 -- Expressions
 ------------------------------------------------------------
 
 exprToDoc :: Expr -> Doc AnsiStyle
-exprToDoc (FormulaExpr _ sformula)   = sformulaToDoc sformula
-exprToDoc (ModelExpr _ nodes labels) =
-  angles $
-    nest 2 $
-      line <>
-      vsep [ exprToDoc nodes <> comma
-           , exprToDoc labels
-           ] <> line
-exprToDoc (LabelsExpr _ labels)      = labelsExprToDoc False labels
-exprToDoc (NodesExpr _ infoNodes)    = nodesExprToDoc False infoNodes
-exprToDoc (VarExpr _ var)            = varColor (pretty var)
+exprToDoc (FormulaExpr _ f) = sformulaToDoc 0 f
+exprToDoc (VarExpr _ v) = varColor (pretty v)
+exprToDoc (NodesExpr _ ns) = nodesExprToDoc False ns
+exprToDoc (LabelsExpr _ ls) = labelsExprToDoc False ls
+exprToDoc (ModelExpr _ n l) = 
+    angles $ exprToDocInline n <> punctuationColor comma <+> exprToDocInline l
 
-------------------------------------------------------------
--- Nodes
-------------------------------------------------------------
+exprToDocInline :: Expr -> Doc AnsiStyle
+exprToDocInline (NodesExpr _ ns) = nodesExprToDoc True ns
+exprToDocInline (LabelsExpr _ ls) = labelsExprToDoc True ls
+exprToDocInline e = exprToDoc e
+
 
 nodesExprToDoc :: Bool -> [InfoNode] -> Doc AnsiStyle
-nodesExprToDoc _ infoNodes =
-  braces $
-    nest 2 $
-      line <>
-      vsep (map nodeLine infoNodes) <>
-      line
+nodesExprToDoc inline ns 
+  | inline    = braces (hsep $ punctuate (punctuationColor comma) (map nodeLine ns))
+  | otherwise = braces $ nest 2 (line <> vsep (map nodeLine ns) <> line)
   where
-    nodeLine (node, isInitial, neighs) =
-      let nodeDoc =
-            if isInitial
-              then parens (nodeColor (pretty node))
-              else nodeColor (pretty node)
-          neighsDoc =
-            braces $
-              hsep $
-                punctuate comma (map (nodeColor . pretty) neighs)
-      in nodeDoc <+> opColor (pretty "=>") <+> neighsDoc
+    nodeLine (n, isInit, neighs) = nodeDoc <+> arrowColor (pretty "=>") <+> neighsDoc
+    nodeDoc = if isInit 
+              then parens (nodeColor (pretty n)) 
+              else nodeColor (pretty n)
+    neighsDoc = braces $ hsep $ punctuate (punctuationColor comma) (map (nodeColor . pretty) neighs)
 
-------------------------------------------------------------
--- Labels
-------------------------------------------------------------
+
 
 labelsExprToDoc :: Bool -> [Label] -> Doc AnsiStyle
-labelsExprToDoc _ labels =
-  braces $
-    nest 2 $
-      line <>
-      vsep (map labelLine labels) <>
-      line
+labelsExprToDoc inline ls 
+  | inline    = braces (hsep $ punctuate (punctuationColor comma) (map labelLine ls))
+  | otherwise = braces $ nest 2 (line <> vsep (map labelLine ls) <> line)
   where
-    labelLine (node, atoms) =
-      let atomsDoc =
-            braces $
-              hsep $
-                punctuate comma (map (atomColor . pretty) atoms)
-      in nodeColor (pretty node)
-         <+> opColor (pretty "<=")
-         <+> atomsDoc
+    labelLine (n, atoms) = 
+        nodeColor (pretty n) <+> arrowColor (pretty "<=") <+> 
+        braces (hsep $ punctuate (punctuationColor comma) (map (atomColor . pretty) atoms))
 
-------------------------------------------------------------
--- Formulas
-------------------------------------------------------------
 
-formulaToDoc :: Formula -> Doc AnsiStyle
-formulaToDoc F                        = atomColor (pretty "⊥")
-formulaToDoc T                        = atomColor (pretty "⊤")
-formulaToDoc (Atom atom)              = atomColor (pretty atom)
-formulaToDoc (Not p)                  = opColor (pretty "¬") <+> parens (formulaToDoc p)
-formulaToDoc (BinaryOp op p q)        =
-  parens (formulaToDoc p <+> binaryOpToDoc op <+> parens (formulaToDoc q))
-formulaToDoc (UQuantifier uquant p)   =
-  uquantifierToDoc uquant <+> parens (formulaToDoc p)
-formulaToDoc (BQuantifier bquant p q) =
-  bquantifierToDoc bquant p q
+sformulaToDoc :: Int -> SFormula -> Doc AnsiStyle
+sformulaToDoc _ SF = atomColor (pretty "⊥")
+sformulaToDoc _ ST = atomColor (pretty "⊤")
+sformulaToDoc _ (SAtom a) = atomColor (pretty a)
+sformulaToDoc _ (SVar v) = varColor (pretty v)
 
-sformulaToDoc :: SFormula -> Doc AnsiStyle
-sformulaToDoc SF                          = atomColor (pretty "⊥")
-sformulaToDoc ST                          = atomColor (pretty "⊤")
-sformulaToDoc (SAtom atom)                = atomColor (pretty atom)
-sformulaToDoc (SNot sp)                   = opColor (pretty "¬") <+> parens (sformulaToDoc sp)
-sformulaToDoc (SBinaryOp op sp sq)        =
-  parens (sformulaToDoc sp <+> binaryOpToDoc op <+> parens (sformulaToDoc sq))
-sformulaToDoc (SUQuantifier uquant sp)    =
-  uquantifierToDoc uquant <+> parens (sformulaToDoc sp)
-sformulaToDoc (SBQuantifier bquant sp sq) =
-  sbquantifierToDoc bquant sp sq
-sformulaToDoc (SVar var)                  = varColor (pretty var)
+sformulaToDoc prec (SNot p) = 
+    parensIf (prec > 4) $ 
+    opColor (pretty "¬") <> sformulaToDoc 4 p
 
-------------------------------------------------------------
--- Quantifiers and operators
-------------------------------------------------------------
+sformulaToDoc prec (SBinaryOp op p q) = 
+    parensIf (prec > opPrec) $ 
+    sformulaToDoc (opPrec + 1) p <+> binaryOpToDoc op <+> sformulaToDoc (opPrec + 1) q
+  where
+    opPrec = case op of
+        Implies -> 1
+        Or      -> 2
+        And     -> 3
+
+sformulaToDoc _ (SUQuantifier uq p) = 
+    uquantifierToDoc uq <+> sformulaToDoc 5 p
+
+sformulaToDoc _ (SBQuantifier bq p q) = 
+    sbquantifierToDoc bq p q
+
+parensIf :: Bool -> Doc AnsiStyle -> Doc AnsiStyle
+parensIf True = parens
+parensIf False = id
+
+
 
 uquantifierToDoc :: UQuantifier -> Doc AnsiStyle
-uquantifierToDoc AC = quantifierColor (pretty "A()")
-uquantifierToDoc EC = quantifierColor (pretty "E()")
-uquantifierToDoc AR = quantifierColor (pretty "A<>")
-uquantifierToDoc ER = quantifierColor (pretty "E<>")
-uquantifierToDoc AS = quantifierColor (pretty "A[]")
-uquantifierToDoc ES = quantifierColor (pretty "E[]")
+uquantifierToDoc AC = quantifierColor (pretty "A◯")
+uquantifierToDoc EC = quantifierColor (pretty "E◯")
+uquantifierToDoc AR = quantifierColor (pretty "A◇")
+uquantifierToDoc ER = quantifierColor (pretty "E◇")
+uquantifierToDoc AS = quantifierColor (pretty "A◻")
+uquantifierToDoc ES = quantifierColor (pretty "E◻")
 
 sbquantifierToDoc :: BQuantifier -> SFormula -> SFormula -> Doc AnsiStyle
-sbquantifierToDoc AU sp sq =
-  quantifierColor (pretty "A") <> untilToDoc (sformulaToDoc sp) (sformulaToDoc sq)
-sbquantifierToDoc EU sp sq =
-  quantifierColor (pretty "E") <> untilToDoc (sformulaToDoc sp) (sformulaToDoc sq)
-
-bquantifierToDoc :: BQuantifier -> Formula -> Formula -> Doc AnsiStyle
-bquantifierToDoc AU p q =
-  quantifierColor (pretty "A") <> untilToDoc (formulaToDoc p) (formulaToDoc q)
-bquantifierToDoc EU p q =
-  quantifierColor (pretty "E") <> untilToDoc (formulaToDoc p) (formulaToDoc q)
-
-untilToDoc :: Doc AnsiStyle -> Doc AnsiStyle -> Doc AnsiStyle
-untilToDoc d1 d2 =
-  brackets (d1 <+> quantifierColor (pretty "U") <+> d2)
+sbquantifierToDoc q p r = 
+    quantifierColor (pretty (case q of AU -> "A"; EU -> "E")) <>
+    brackets (sformulaToDoc 0 p <+> quantifierColor (pretty "U") <+> sformulaToDoc 0 r)
 
 binaryOpToDoc :: BinaryOp -> Doc AnsiStyle
-binaryOpToDoc And      = opColor (pretty "&&")
-binaryOpToDoc Or       = opColor (pretty "||")
-binaryOpToDoc Implies  = opColor (pretty "->")
+binaryOpToDoc And     = opColor (pretty "∧")
+binaryOpToDoc Or      = opColor (pretty "∨")
+binaryOpToDoc Implies = opColor (pretty "→")
 
-------------------------------------------------------------
--- Types and sentences
-------------------------------------------------------------
 
 typeToDoc :: Type -> Doc AnsiStyle
-typeToDoc ModelTy   = typeOpColor (pretty "Model")
-typeToDoc LabelsTy  = typeOpColor (pretty "Labels")
-typeToDoc NodesTy   = typeOpColor (pretty "Nodes")
-typeToDoc FormulaTy = typeOpColor (pretty "Formula")
+typeToDoc ModelTy   = typeColor (pretty "Model")
+typeToDoc LabelsTy  = typeColor (pretty "Labels")
+typeToDoc NodesTy   = typeColor (pretty "Nodes")
+typeToDoc FormulaTy = typeColor (pretty "Formula")
 
 sentenceToDoc :: Sentence -> Doc AnsiStyle
-sentenceToDoc (Def _ var ty e) =
-  sep
-    [ keywordColor (pretty "define")
-    , varColor (pretty var)
-    , pretty "::"
-    , typeToDoc ty
-    , opColor (pretty "=")
-    ]
-  <+> nest 2 (exprToDoc e)
+sentenceToDoc (Def _ v t e) = 
+    sep [ keywordColor (pretty "define")
+        , varColor (pretty v)
+        , punctuationColor (pretty "::")
+        , typeToDoc t
+        , opColor (pretty "=")
+        ] <+> exprToDoc e
 
-sentenceToDoc (Export _ model file) =
-  sep
-    [ keywordColor (pretty "export")
-    , exprToDoc model
-    , keywordColor (pretty "as")
-    , pretty file
-    ]
+sentenceToDoc (Export _ m f) = 
+    sep [ keywordColor (pretty "export")
+        , exprToDoc m
+        , keywordColor (pretty "as")
+        , pretty f
+        ]
 
-sentenceToDoc (IsSatis _ formula) =
-  sep
-    [ opColor (pretty "|=")
-    , exprToDoc formula
-    ]
+sentenceToDoc (IsSatis _ f) = 
+    sep [ opColor (pretty "⊨"), exprToDoc f ]
 
-sentenceToDoc (Models _ model formula) =
-  sep
-    [ exprToDoc model
-    , opColor (pretty "|=")
-    , exprToDoc formula
-    ]
+sentenceToDoc (Models _ m f) = 
+    sep [ exprToDoc m, opColor (pretty "⊨"), exprToDoc f ]
 
-sentenceToDoc (IsValid _ model node formula) =
-  sep
-    [ exprToDoc model
-    , pretty ","
-    , nodeColor (pretty node)
-    , opColor (pretty "|=")
-    , exprToDoc formula
-    ]
+sentenceToDoc (IsValid _ m n f) = 
+    sep [ exprToDoc m
+        , punctuationColor comma
+        , nodeColor (pretty n)
+        , opColor (pretty "⊨")
+        , exprToDoc f
+        ]
 
-------------------------------------------------------------
--- Rendering helpers
-------------------------------------------------------------
 
 render :: Doc AnsiStyle -> String
 render = unpack . renderStrict . layoutSmart defaultLayoutOptions
-
-ppType :: Type -> String
-ppType = render . typeToDoc
 
 ppSentence :: Sentence -> String
 ppSentence = render . sentenceToDoc
