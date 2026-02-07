@@ -69,6 +69,8 @@ executable ctl-edsl-exe
       base >=4.7 && <5
     , containers
     , ctl-edsl
+    , exceptions
+    , haskeline
     , mtl
     , optparse-applicative
     , parsec

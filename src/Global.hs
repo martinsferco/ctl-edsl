@@ -6,11 +6,12 @@ import Lang
 type Definition = (VarIdent, Type, Value)
 
 data GState = GState {
-  definitions :: [Definition]
+  definitions :: [Definition],
+  lastFile :: String
 }
 
 initialState :: GState
-initialState = GState []
+initialState = GState [] ""
 
 data Mode 
   = Interactive 

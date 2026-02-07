@@ -42,10 +42,11 @@ nodesExprToDoc inline ns
   | otherwise = braces $ nest 2 (line <> vsep (map nodeLine ns) <> line)
   where
     nodeLine (n, isInit, neighs) = nodeDoc <+> arrowColor (pretty "=>") <+> neighsDoc
-    nodeDoc = if isInit 
-              then parens (nodeColor (pretty n)) 
-              else nodeColor (pretty n)
-    neighsDoc = braces $ hsep $ punctuate (punctuationColor comma) (map (nodeColor . pretty) neighs)
+        where
+            nodeDoc = if isInit 
+                      then parens (nodeColor (pretty n)) 
+                      else nodeColor (pretty n)
+            neighsDoc = braces $ hsep $ punctuate (punctuationColor comma) (map (nodeColor . pretty) neighs)
 
 
 

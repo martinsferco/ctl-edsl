@@ -15,8 +15,6 @@ import qualified Data.Map as Map
 import Control.Monad ( unless )
 
 
-
-
 evalSentence :: MonadCTL m => Sentence -> m()
 evalSentence d@(Def _ var ty e) = addDefinition d
 

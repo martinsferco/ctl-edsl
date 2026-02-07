@@ -59,6 +59,8 @@ executables:
     - optparse-applicative
     - containers
     - parsec
+    - haskeline
+    - exceptions
 
 
 tests:

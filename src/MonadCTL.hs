@@ -23,6 +23,15 @@ class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m)
 getMode :: MonadCTL m => m Mode
 getMode = asks mode
 
+getLastFile :: MonadCTL m => m (Maybe String)
+getLastFile = do state <- get
+                 let file = lastFile state
+                 if file == ""  then return Nothing
+                                else return $ Just file
+
+setLastFile :: MonadCTL m => String -> m ()
+setLastFile file = modify (\state -> state { lastFile = file })
+
 printCTL :: MonadCTL m => String -> m ()
 printCTL = liftIO . putStrLn
 
@@ -41,9 +50,9 @@ addDef var ty val = do
         []    -> return ()
 
 
-typingContext :: MonadCTL m => m ([(VarIdent, Type)])
-typingContext = do state <- get
-                   return $ map (\(v,ty,_) -> (v,ty)) (definitions state)
+getDefinitions :: MonadCTL m => m ([(VarIdent, Type)])
+getDefinitions = do state <- get
+                    return $ map (\(v,ty,_) -> (v,ty)) (definitions state)
 
 getTy :: MonadCTL m => VarIdent -> m Type
 getTy = selectDefinition (\(_, ty, _) -> ty)
