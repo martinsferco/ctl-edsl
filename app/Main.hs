@@ -38,11 +38,14 @@ main' = execParser interpreterOpts >>= go
 
     go :: (Mode,[FilePath]) -> IO ()
     go (mode, files) = case mode of 
-      Interactive -> runInputT defaultSettings $ runOrFailInputT (Conf mode) $ do
+      Interactive -> runInputT customSettings $ runOrFailInputT (Conf mode) $ do
         mapM_ handleFile files
         interactiveLoop
 
       _           -> runOrFailCTL (Conf mode) $ mapM_ handleFile files
+
+customSettings :: Settings IO
+customSettings = defaultSettings { historyFile = Just ".ctli_history" }
 
 
 runOrFailCTL :: Conf -> CTL a -> IO a
@@ -116,7 +119,7 @@ interactiveLoop = printCTL interactiveTitle >> repl
 repl :: MonadCTL m => m ()
 repl = do 
   line <- liftIO $ catch
-            (runInputT defaultSettings $ getInputLine interactivePrompt)
+            (runInputT customSettings $ getInputLine interactivePrompt)
             ioExceptionCatcher
   handleInputLine line
   where
