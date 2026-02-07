@@ -9,7 +9,13 @@ data Type
   | LabelsTy
   | NodesTy
   | FormulaTy
-  deriving (Show, Eq)
+  deriving Eq
+
+instance Show Type where
+  shoe ModelTy   = "Model"
+  shoe LabelsTy  = "Labels"
+  shoe NodesTy   = "Nodes"
+  shoe FormulaTy = "Formula"
 
 
 data UQuantifier -- Temporal unary quantifiers
