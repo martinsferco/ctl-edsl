@@ -2,6 +2,7 @@ module Eval where
 
 import Model.TSystemMethods
 import Model.TSystem
+import PrettyPrinter
 import TypeCheck
 import MonadCTL
 import Common
@@ -24,19 +25,31 @@ evalSentence (Export _ e f)     = do  v <- reduceExpr e
 
 evalSentence (IsSatis _ e)      = do  v <- reduceExpr e
                                       formula <- expectsFormula v
-                                      isSatis formula
-
+                                      maybeTS <- isSatis formula
+                                      maybeExportTSystem maybeTS "CHADDY"
+                                      
 evalSentence (Models _ m f)   =   do  vm <- reduceExpr m
                                       ts <- expectsModel vm
                                       vf <- reduceExpr f
                                       form <- expectsFormula vf
-                                      ts `models` form
+                                      evalResult <- ts `models` form
+                                      printCTL $ ppEvalResult evalResult
 
 evalSentence (IsValid _ m n f) =  do vm <- reduceExpr m
                                      ts <- expectsModel vm
                                      vf <- reduceExpr f
                                      form <- expectsFormula vf
-                                     isValid ts n form
+                                     evalResult <- isValid ts n form
+                                     printCTL $ ppEvalResult evalResult
+
+
+
+maybeExportTSystem :: MonadCTL m => Maybe TSystem -> String -> m ()
+maybeExportTSystem mts name = 
+  case mts of
+    Nothing -> printCTL "[] Did not found a transition system which models the formula."
+    Just ts -> exportTSystem ts name  
+
 
 addDefinition :: MonadCTL m => Sentence -> m ()
 addDefinition (Def _ var ty e) = do v <- reduceExpr e

@@ -2,7 +2,7 @@ module Error where
 
 import Text.Parsec.Error ( ParseError )
 import Lang ( Type )
-import Common ( Pos )
+import Common ( Pos(..) )
 
 data Error 
   = ParseErr ParseError
@@ -12,6 +12,12 @@ data Error
 instance Show Error where
   show (ParseErr e)      = "[Error] " ++ show e
   show (GeneralError p s) = "[Error " ++ show p ++ "] " ++ s
+
+instance Semigroup Error where
+  e <> _ = e
+
+instance Monoid Error where
+  mempty = GeneralError NoPos ""
 
 
 expectedMsg :: Type -> String

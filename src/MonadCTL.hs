@@ -9,6 +9,7 @@ import Common
 import Lang
 import Global
 
+import Control.Applicative (Alternative) 
 import Control.Monad (unless)
 import Control.Monad.State
 import Control.Monad.Except
@@ -16,7 +17,7 @@ import Control.Monad.Reader
 import System.IO
 
 
-class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m) 
+class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m, Alternative m) 
   => MonadCTL m where
 
 

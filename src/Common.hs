@@ -36,3 +36,6 @@ data InfoNodes = InfoNodes
     transitions :: TransitionFunction
   }
   deriving (Show, Eq)
+
+
+

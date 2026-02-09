@@ -28,6 +28,7 @@ library
       Common
       Error
       Eval
+      EvalResult
       Global
       Lang
       Model.TSystem

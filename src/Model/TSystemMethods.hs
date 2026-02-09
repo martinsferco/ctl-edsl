@@ -1,12 +1,15 @@
 module Model.TSystemMethods where
 
 import Model.TSystem
+import EvalResult
 import MonadCTL
 import Common
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List ( intercalate )
+import Data.Foldable (asum)
+
 
 import Control.Monad.IO.Class
 import Control.Monad (unless)
@@ -37,6 +40,9 @@ completeLabeling graph labels =
 
 getNodes :: TSystem -> Nodes
 getNodes = nodes . graph
+
+setInitialNodes :: TSystem -> Nodes -> TSystem
+setInitialNodes ts nodes = ts { graph = (graph ts) { inits = nodes } }
 
 getInitialNodes :: TSystem -> Nodes
 getInitialNodes = inits . graph
@@ -69,12 +75,53 @@ nonBlockingGraph graph = if nonBlocking then return ()
     nonBlocking = nodes graph == Map.keysSet (trans graph)
 
 
+-- ============================================================================
+-- BÚSQUEDA DE CICLOS Y CAMINOS
+-- ============================================================================
+
+findCycleInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> m (Maybe [NodeIdent])
+findCycleInSubgraph ts validNodes start = findCycleInSubgraph' Set.empty [start] start
+  where
+    findCycleInSubgraph' :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
+    findCycleInSubgraph' visited path current
+      | current `Set.notMember` validNodes = return Nothing
+      | current `Set.member` visited       = return Nothing
+      | otherwise = do  let visited' = Set.insert current visited
+                        nexts <- getNeighboors ts current
+                        let validNexts = filter (`Set.member` validNodes) (Set.toList nexts)
+                        asum [exploreNext visited' path next | next <- validNexts]
+    
+    exploreNext :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
+    exploreNext visited path next
+      | next `Set.member` visited = return Nothing  
+      | next `elem` path          = return $ Just (reverse (next : path)) 
+      | otherwise                 = findCycleInSubgraph' visited (next : path) next
+
+
+findPathToTargetInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> Nodes -> m (Maybe [NodeIdent])
+findPathToTargetInSubgraph ts validNodes start targetNodes = findPathToTargetInSubgraph' Set.empty [start] start
+  where
+    findPathToTargetInSubgraph' :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
+    findPathToTargetInSubgraph' visited path current
+      | current `Set.member` targetNodes   = return $ Just (reverse path)
+      | current `Set.notMember` validNodes = return Nothing
+      | current `Set.member` visited       = return Nothing
+      | otherwise = do
+          let visited' = Set.insert current visited
+          nexts <- getNeighboors ts current
+          let validNexts = filter (`Set.member` validNodes) (Set.toList nexts)
+          asum [findPathToTargetInSubgraph' visited' (next : path) next | next <- validNexts]
+
+
+-- ============================================================================
+-- EXPORTACIÓN DEL SISTEMA DE TRANSICIÓN
+-- ============================================================================
 
 exportTSystem :: MonadCTL m => TSystem -> String -> m ()
 exportTSystem ts fileName = 
   do exportedGraph <- buildExportedTSystem ts
      liftIO $ runGraphviz exportedGraph Pdf (fileName ++ fileExtension)
-     printCTL "Grafo exportado!"
+     printCTL "[] Transition system exported !"
   where 
     fileExtension = ".pdf"
 
@@ -109,5 +156,4 @@ buildExportedEdges ts = concat <$> mapM buildTransitions (Set.toList $ getNodes 
 
 
 buildLabel :: LabelingFunction -> NodeIdent -> String
-buildLabel labeling node = intercalate "," (Set.toList $ labeling Map.! node)
-
+buildLabel labeling node = node ++ ": {" ++ intercalate "," (Set.toList $ labeling Map.! node) ++ "}"

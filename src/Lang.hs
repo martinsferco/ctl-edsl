@@ -74,8 +74,8 @@ data Formula
 data Sentence 
   = Def Pos VarIdent Type Expr
   | Export Pos Expr String
-  | IsSatis Pos Expr                      --     |= p
-  | Models Pos Expr Expr                  -- M   |= p
+  | IsSatis Pos Expr                      
+  | Models Pos Expr Expr                  
   | IsValid Pos Expr NodeIdent Expr
   deriving Show
 
