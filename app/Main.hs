@@ -108,7 +108,10 @@ handleSentence sentence = do
       TypeCheck   -> do
         addDefinition sentence  
         printCTL $ ppSentence sentence
-      Interactive -> evalSentence sentence  
+      
+      Interactive -> do 
+        addDefinition sentence  
+      
       Eval        -> evalSentence sentence
 
 
@@ -173,7 +176,8 @@ handleCommand Browse =
       return True
 
 handleCommand (InteractiveSentence sentenceLine) =
-  do  catchError (parseCTL "<interactive>" sentence sentenceLine >>= handleSentence)
+  do  catchError (parseCTL "<interactive>" sentence sentenceLine >>= 
+                                          (\s -> typeCheckSentence s >> evalSentence s))
                  (printCTL . show)
       return True
   
