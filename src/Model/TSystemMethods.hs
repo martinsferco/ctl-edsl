@@ -8,7 +8,6 @@ import Common
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List ( intercalate )
-import Data.Foldable (asum)
 
 
 import Control.Monad.IO.Class
@@ -74,50 +73,50 @@ nonBlockingGraph graph = if nonBlocking then return ()
   where 
     nonBlocking = nodes graph == Map.keysSet (trans graph)
 
-
-
 findCycleInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> m (Maybe [NodeIdent])
-findCycleInSubgraph ts validNodes start = findCycleInSubgraph' Set.empty [start] start
+findCycleInSubgraph ts validNodes start = findCycleInSubgraph' [] start
   where
-    findCycleInSubgraph' :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
-    findCycleInSubgraph' visited path current
+    findCycleInSubgraph' :: MonadCTL m => [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
+    findCycleInSubgraph' path current
+      | current `elem` path                = return (Just $ reverse (current : path))
       | current `Set.notMember` validNodes = return Nothing
-      | current `Set.member` visited       = return Nothing
-      | otherwise = do  let visited' = Set.insert current visited
-                        nexts <- getNeighboors ts current
-                        let validNexts = filter (`Set.member` validNodes) (Set.toList nexts)
-                        asum [exploreNext visited' path next | next <- validNexts]
-    
-    exploreNext :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
-    exploreNext visited path next
-      | next `Set.member` visited = return Nothing  
-      | next `elem` path          = return $ Just (reverse (next : path)) 
-      | otherwise                 = findCycleInSubgraph' visited (next : path) next
-
-
-findPathToTargetInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> Nodes -> m (Maybe [NodeIdent])
-findPathToTargetInSubgraph ts validNodes start targetNodes = findPathToTargetInSubgraph' Set.empty [start] start
-  where
-    findPathToTargetInSubgraph' :: MonadCTL m => Nodes -> [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
-    findPathToTargetInSubgraph' visited path current
-      | current `Set.member` targetNodes   = return $ Just (reverse path)
-      | current `Set.notMember` validNodes = return Nothing
-      | current `Set.member` visited       = return Nothing
-      | otherwise = do
-          let visited' = Set.insert current visited
+      | otherwise = do  
+          let path' = current : path
           nexts <- getNeighboors ts current
           let validNexts = filter (`Set.member` validNodes) (Set.toList nexts)
-          asum [findPathToTargetInSubgraph' visited' (next : path) next | next <- validNexts]
+          tryEach [findCycleInSubgraph' path' next | next <- validNexts]
 
+findPathToTargetInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> Nodes -> m (Maybe [NodeIdent])
+findPathToTargetInSubgraph ts validPathNodes start targetNodes = findPathToTargetInSubgraph' [] start
+  where
+    findPathToTargetInSubgraph' :: MonadCTL m => [NodeIdent] -> NodeIdent -> m (Maybe [NodeIdent])
+    findPathToTargetInSubgraph' path current
+      | current `Set.member` targetNodes       = return (Just $ reverse (current : path))
+      | current `elem` path                    = return Nothing
+      | current `Set.notMember` validPathNodes = return Nothing          
+      | otherwise = do
+          let path' = current : path
+          nexts <- getNeighboors ts current
+          let validNodes = Set.union validPathNodes targetNodes
+          let validNexts = filter (`Set.member` validNodes) (Set.toList nexts)
+          tryEach [findPathToTargetInSubgraph' path' next | next <- validNexts]
 
+tryEach :: MonadCTL m => [m (Maybe a)] -> m (Maybe a)
+tryEach [] = return Nothing
+tryEach (action : rest) = do
+  result <- action
+  case result of
+    Just x  -> return (Just x)
+    Nothing -> tryEach rest
 
 exportTSystem :: MonadCTL m => TSystem -> String -> m ()
 exportTSystem ts fileName = 
   do exportedGraph <- buildExportedTSystem ts
-     liftIO $ runGraphviz exportedGraph Pdf (fileName ++ fileExtension)
+     liftIO $ runGraphviz exportedGraph Pdf (exportFolder ++ fileName ++ fileExtension)
      printCTL "[] Transition system exported !"
   where 
     fileExtension = ".pdf"
+    exportFolder = "export/"
 
 
 buildExportedTSystem :: MonadCTL m => TSystem -> m (DotGraph NodeIdent)
