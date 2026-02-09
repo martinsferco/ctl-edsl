@@ -25,6 +25,9 @@ languageDefintion = emptyDef
   , commentEnd      = "*/"
   , commentLine     = "//"
 
+  , identStart      = letter <|> char '_'
+  , identLetter     = alphaNum <|> char '_'
+
   , reservedNames   = ["define", "Model", "Nodes", "Labels",
                        "Formula", "export", "F", "T", "A", "E", "U", "as"]
   , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()",
@@ -171,46 +174,47 @@ formulaExpr :: P Expr
 formulaExpr = FormulaExpr <$> getPos <*> formulaExpr'
   
 formulaExpr' :: P SFormula
-formulaExpr' = chainr1 impliesTerm (implies >> return (SBinaryOp Implies))
-
-impliesTerm :: P SFormula
-impliesTerm = chainl1 orTerm (orOp >> return (SBinaryOp Or))
+formulaExpr' = chainr1 orTerm (implies >> return (SBinaryOp Implies))
 
 orTerm :: P SFormula
-orTerm = chainl1 andTerm (andOp >> return (SBinaryOp And))
+orTerm = chainl1 andTerm (orOp >> return (SBinaryOp Or))
 
 andTerm :: P SFormula
-andTerm = try unaryQuantifier <|> binaryQuantifier
+andTerm = chainl1 notTerm (andOp >> return (SBinaryOp And))
 
-unaryQuantifier :: P SFormula
-unaryQuantifier = try (forallQuantifier >> circle >> SUQuantifier AC <$> unaryQuantifier) <|>
-                  try (existsQuantifier >> circle >> SUQuantifier EC <$> unaryQuantifier) <|>
-                  try (forallQuantifier >> rombus >> SUQuantifier AR <$> unaryQuantifier) <|>
-                  try (existsQuantifier >> rombus >> SUQuantifier ER <$> unaryQuantifier) <|>
-                  try (forallQuantifier >> square >> SUQuantifier AS <$> unaryQuantifier) <|>
-                  try (existsQuantifier >> square >> SUQuantifier ES <$> unaryQuantifier) <|>
-                      quantifierTerm
-
-binaryQuantifier :: P SFormula
-binaryQuantifier = try  (forallQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
-                        (existsQuantifier >> (uncurry $ SBQuantifier EU) <$> brackets binaryAux)
-
-  where binaryAux = do  leftFormula <- formulaExpr'
-                        reserved "U"
-                        rightFormula <- formulaExpr'
-                        return (leftFormula, rightFormula)
+notTerm :: P SFormula
+notTerm = try (negation >> SNot <$> notTerm) <|> quantifierTerm
 
 quantifierTerm :: P SFormula
-quantifierTerm = try (negation >> SNot <$> quantifierTerm) <|>
-                 atomicTerm
+quantifierTerm = try unaryQuantifier <|> try binaryQuantifier <|> atomicTerm
+
+unaryQuantifier :: P SFormula
+unaryQuantifier = 
+  try (forallQuantifier >> circle >> SUQuantifier AC <$> notTerm) <|> 
+  try (existsQuantifier >> circle >> SUQuantifier EC <$> notTerm) <|> 
+  try (forallQuantifier >> rombus >> SUQuantifier AR <$> notTerm) <|> 
+  try (existsQuantifier >> rombus >> SUQuantifier ER <$> notTerm) <|> 
+  try (forallQuantifier >> square >> SUQuantifier AS <$> notTerm) <|> 
+  try (existsQuantifier >> square >> SUQuantifier ES <$> notTerm)     
+
+binaryQuantifier :: P SFormula
+binaryQuantifier = 
+  try (forallQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
+      (existsQuantifier >> (uncurry $ SBQuantifier EU) <$> brackets binaryAux)
+  where 
+    binaryAux = do  
+      leftFormula <- formulaExpr'  
+      reserved "U"
+      rightFormula <- formulaExpr'
+      return (leftFormula, rightFormula)
 
 atomicTerm :: P SFormula 
-atomicTerm =  try (parens formulaExpr') <|>
-              try (top >> return ST)    <|>
-              try (bottom >> return SF) <|>
-              try (SVar <$> varIdent)   <|>
-                  (SAtom <$> atomIdent)     
-
+atomicTerm = 
+  try (parens formulaExpr') <|> 
+  try (top >> return ST)    <|>
+  try (bottom >> return SF) <|>
+  try (SVar <$> varIdent)   <|>
+      (SAtom <$> atomIdent)
 
 
 sentence :: P Sentence
