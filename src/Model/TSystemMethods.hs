@@ -75,9 +75,6 @@ nonBlockingGraph graph = if nonBlocking then return ()
     nonBlocking = nodes graph == Map.keysSet (trans graph)
 
 
--- ============================================================================
--- BÚSQUEDA DE CICLOS Y CAMINOS
--- ============================================================================
 
 findCycleInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> m (Maybe [NodeIdent])
 findCycleInSubgraph ts validNodes start = findCycleInSubgraph' Set.empty [start] start
@@ -113,9 +110,6 @@ findPathToTargetInSubgraph ts validNodes start targetNodes = findPathToTargetInS
           asum [findPathToTargetInSubgraph' visited' (next : path) next | next <- validNexts]
 
 
--- ============================================================================
--- EXPORTACIÓN DEL SISTEMA DE TRANSICIÓN
--- ============================================================================
 
 exportTSystem :: MonadCTL m => TSystem -> String -> m ()
 exportTSystem ts fileName = 

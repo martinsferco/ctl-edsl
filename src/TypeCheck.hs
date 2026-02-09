@@ -70,8 +70,8 @@ typeCheckSentence (Def p v ty expr)        = unlessCTL (expr `exprOfType` ty) $
 typeCheckSentence (Export p model _)       = unlessCTL (model `exprOfType` ModelTy) $
                                                 failPosCTL p (expectedMsg ModelTy)
 
-typeCheckSentence (IsSatis p formula)      = unlessCTL (formula `exprOfType` FormulaTy) $
-                                                failPosCTL p (expectedMsg FormulaTy)
+typeCheckSentence (IsSatis p formula _)      = unlessCTL (formula `exprOfType` FormulaTy) $
+                                                 failPosCTL p (expectedMsg FormulaTy)
 
 typeCheckSentence (Models p model formula) = do unlessCTL (model `exprOfType` ModelTy) $
                                                     failPosCTL p $ (expectedMsg ModelTy)

@@ -157,8 +157,12 @@ sentenceToDoc (Export _ m f) =
         , pretty f
         ]
 
-sentenceToDoc (IsSatis _ f) = 
-    sep [ keywordColor (pretty "⊨"), exprToDoc f ]
+sentenceToDoc (IsSatis _ f file) = 
+    sep [ keywordColor (pretty "⊨")
+        , exprToDoc f
+        , keywordColor (pretty "as")
+        , pretty file 
+        ]
 
 sentenceToDoc (Models _ m f) = 
     sep [ exprToDoc m, keywordColor (pretty "⊨"), exprToDoc f ]

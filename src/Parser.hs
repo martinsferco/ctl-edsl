@@ -258,7 +258,9 @@ isSatisSentence :: P Sentence
 isSatisSentence = do  pos <- getPos
                       modelsFormula
                       form <- expr
-                      return $ IsSatis pos form
+                      reserved "as"
+                      fileName <- identifier
+                      return $ IsSatis pos form fileName
 
 ---------------------------------------
 -- General parsers

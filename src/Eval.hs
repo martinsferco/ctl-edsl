@@ -23,10 +23,10 @@ evalSentence (Export _ e f)     = do  v <- reduceExpr e
                                       ts <- expectsModel v
                                       exportTSystem ts f
 
-evalSentence (IsSatis _ e)      = do  v <- reduceExpr e
-                                      formula <- expectsFormula v
-                                      maybeTS <- isSatis formula
-                                      maybeExportTSystem maybeTS "CHADDY"
+evalSentence (IsSatis _ e f)      = do  v <- reduceExpr e
+                                        formula <- expectsFormula v
+                                        maybeTS <- isSatis formula
+                                        maybeExportTSystem maybeTS f
                                       
 evalSentence (Models _ m f)   =   do  vm <- reduceExpr m
                                       ts <- expectsModel vm

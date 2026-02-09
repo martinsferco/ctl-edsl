@@ -8,7 +8,6 @@ data Error
   = ParseErr ParseError
   | GeneralError Pos String
 
-  
 instance Show Error where
   show (ParseErr e)      = "[Error] " ++ show e
   show (GeneralError p s) = "[Error " ++ show p ++ "] " ++ s
@@ -18,7 +17,6 @@ instance Semigroup Error where
 
 instance Monoid Error where
   mempty = GeneralError NoPos ""
-
 
 expectedMsg :: Type -> String
 expectedMsg ty = "Expected a " ++ show ty ++ ", but got a different type." 
