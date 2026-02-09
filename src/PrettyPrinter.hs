@@ -4,16 +4,20 @@ import Lang
 import Common
 import EvalResult
 import Prettyprinter
+import Model.TSystem
 import Prettyprinter.Render.Terminal
 import Data.Text (unpack)
 
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 
--- Colores más discretos - solo para resaltar elementos clave
 keywordColor, successColor, failColor :: Doc AnsiStyle -> Doc AnsiStyle
 keywordColor = annotate (color Cyan)
 successColor = annotate (color Green <> bold)
 failColor    = annotate (color Red <> bold)
+
+title :: String -> Doc AnsiStyle
+title s = annotate bold (pretty s)
 
 ------------------------------------------------------------
 -- Expressions
@@ -54,6 +58,62 @@ labelsExprToDoc inline ls
     labelLine (n, atoms) = 
         pretty n <+> pretty "<=" <+> 
         braces (hsep $ punctuate comma (map pretty atoms))
+
+
+valueToDoc :: Value -> Doc AnsiStyle
+valueToDoc (Formula f) =
+  formulaToDoc 0 f
+
+valueToDoc (Model ts) =
+  modelToDoc ts
+
+valueToDoc (Labels lf) =
+  labelsExprToDoc False (labelingToLabels lf)
+
+valueToDoc (Nodes infoNs) =
+  nodesExprToDoc False (infoNodesToList infoNs)
+
+--------------------------------------------------------------------------------
+-- Model → Doc
+--------------------------------------------------------------------------------
+
+modelToDoc :: TSystem -> Doc AnsiStyle
+modelToDoc (TSystem g lf) =
+  angles $
+       nodesExprToDoc False (graphToInfoNodes g)
+    <> comma <+>
+       labelsExprToDoc False (labelingToLabels lf)
+
+--------------------------------------------------------------------------------
+-- LabelingFunction → [Label]
+--------------------------------------------------------------------------------
+
+labelingToLabels :: LabelingFunction -> [Label]
+labelingToLabels lf =
+  [ (n, Set.toList atoms)
+  | (n, atoms) <- Map.toList lf
+  ]
+
+--------------------------------------------------------------------------------
+-- Graph / InfoNodes helpers
+--------------------------------------------------------------------------------
+
+graphToInfoNodes :: Graph -> [InfoNode]
+graphToInfoNodes (Graph _ inits trans) =
+  [ (n, Set.member n inits, Set.toList neighs)
+  | (n, neighs) <- Map.toList trans
+  ]
+
+infoNodesToList :: InfoNodes -> [InfoNode]
+infoNodesToList (InfoNodes inits trans) =
+  [ (n, Set.member n inits, Set.toList neighs)
+  | (n, neighs) <- Map.toList trans
+  ]
+
+--------------------------------------------------------------------------------
+-- Reuso de PP de Expr
+--------------------------------------------------------------------------------
+
 
 formulaToDoc :: Int -> Formula -> Doc AnsiStyle
 formulaToDoc _ F = pretty "⊥"
@@ -185,6 +245,9 @@ ppSentence = render . sentenceToDoc
 ppFormula :: Formula -> String
 ppFormula = render . (formulaToDoc 0)
 
+ppValue :: Value -> String
+ppValue = render . valueToDoc
+
 
 ------------------------------------------------------------
 -- Evaluation Results
@@ -198,11 +261,11 @@ evalResultToDoc result = vsep
     , emptyDoc
     , formulaSection result
     , emptyDoc
-    , statusSection result
-    , emptyDoc
     , nodesSection result
     , emptyDoc
     , verificationSection result
+    , emptyDoc
+    , statusSection result
     , emptyDoc
     , pathSection result
     , emptyDoc
@@ -220,11 +283,11 @@ bottomBorder :: Doc AnsiStyle
 bottomBorder = pretty "┗" <> pretty (replicate 58 '━') <> pretty "┛"
 
 formulaSection :: EvalResult -> Doc AnsiStyle
-formulaSection result =  pretty "Formula:    " <> formulaToDoc 0 (evalFormula result)
+formulaSection result =  (title " Formula:    ") <> formulaToDoc 0 (evalFormula result)
 
 statusSection :: EvalResult -> Doc AnsiStyle
 statusSection result = 
-    pretty "Status:     " <> statusDoc
+    (title " Status:     ") <> statusDoc
   where
     statusDoc = if holds result
                 then successColor (pretty "The formula holds!")
@@ -232,16 +295,16 @@ statusSection result =
 
 nodesSection :: EvalResult -> Doc AnsiStyle
 nodesSection result = vsep
-    [ pretty "Sat Nodes", pretty "  " <> ppNodeSet (satNodes result), emptyDoc, checkTypeDoc ]
+    [ title " Sat Nodes", pretty "  " <> ppNodeSet (satNodes result), emptyDoc, checkTypeDoc ]
   where
     checkTypeDoc = case checkType result of
-        CheckInitials nodes -> vsep [ pretty "Initial Nodes", pretty "  " <> ppNodeSet nodes ]
-        CheckNode node -> vsep [ pretty "Checked Node", pretty "  " <> pretty node ]
+        CheckInitials nodes -> vsep [ title " Initial Nodes", pretty "  " <> ppNodeSet nodes ]
+        CheckNode node -> vsep [ title " Checked Node", pretty "  " <> pretty node ]
 
 
 verificationSection :: EvalResult -> Doc AnsiStyle
 verificationSection result = vsep
-    [ pretty "Verification"
+    [ title " Verification"
     , case checkType result of
         CheckInitials inits -> verificationInitials inits
         CheckNode node -> verificationNode node
@@ -251,11 +314,9 @@ verificationSection result = vsep
     
     verificationInitials :: Nodes -> Doc AnsiStyle
     verificationInitials inits
-        | holds result = vsep
-            [ pretty "  " <> successColor (pretty "OK") <+> ppNodeSet inits <+> pretty "⊆" <+> ppNodeSet sat
-            , emptyDoc
-            , pretty "  The formula is valid with respect to all the initial nodes of the model."
-            ]
+        | holds result = 
+            pretty "  " <> successColor (pretty "OK") <+> ppNodeSet inits <+> pretty "⊆" <+> ppNodeSet sat
+
         | otherwise = 
             let violating = Set.difference inits sat
                 total = Set.size inits
@@ -264,25 +325,16 @@ verificationSection result = vsep
                 [ pretty "  " <> failColor (pretty "FAIL") <+> ppNodeSet inits <+> pretty "⊄" <+> ppNodeSet sat
                 , emptyDoc
                 , pretty "  Violating nodes: " <> ppNodeSet violating
-                , emptyDoc
-                , pretty "  The formula is not valid in " <> pretty (show failing) <+> 
-                  pretty "out of" <+> pretty (show total) <+> pretty "initial nodes."
-                , pretty "  The formula is not valid in some of the initial nodes of the model."
                 ]
     
     verificationNode :: NodeIdent -> Doc AnsiStyle
     verificationNode node
-        | holds result = vsep
-            [ pretty "  " <> successColor (pretty "OK") <+> pretty node <+> pretty "∈" <+> ppNodeSet sat
-            , emptyDoc
-            , pretty "  Node" <+> pretty node <+> pretty "satisfies the formula."
-            , pretty "  The property is valid with respect with the node."
-            ]
-        | otherwise = vsep
-            [ pretty "  " <> failColor (pretty "FAIL") <+> pretty node <+> pretty "∉" <+> ppNodeSet sat
-            , emptyDoc
-            , pretty "  The property is not valid with respect with the node."
-            ]
+        | holds result = 
+            pretty "  " <> successColor (pretty "OK") <+> pretty node <+> pretty "∈" <+> ppNodeSet sat
+            
+        | otherwise = 
+            pretty "  " <> failColor (pretty "FAIL") <+> pretty node <+> pretty "∉" <+> ppNodeSet sat
+            
 
 pathSection :: EvalResult -> Doc AnsiStyle
 pathSection result
@@ -293,22 +345,16 @@ pathSection result
 
 witnessPath :: [(NodeIdent, String)] -> Doc AnsiStyle
 witnessPath path = vsep
-    [ successColor (pretty "Witness Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
+    [ successColor (pretty " Witness Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
     , emptyDoc
     , indent 2 (vsep (pathSteps True path))
-    , emptyDoc
-    , indent 2 (pretty "The path demonstrates the formula holds:")
-    , indent 2 (pretty "•" <+> pretty (snd $ last path))
     ]
 
 counterExamplePath :: [(NodeIdent, String)] -> Doc AnsiStyle
 counterExamplePath path = vsep
-    [ failColor (pretty "Counter-Example Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
+    [ failColor (pretty " Counter-Example Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
     , emptyDoc
     , indent 2 (vsep (pathSteps False path))
-    , emptyDoc
-    , indent 2 (pretty "The path demonstrates why the formula fails:")
-    , indent 2 (vsep (map (\(_, desc) -> pretty "•" <+> pretty desc) path))
     ]
 
 pathSteps :: Bool -> [(NodeIdent, String)] -> [Doc AnsiStyle]
@@ -316,44 +362,19 @@ pathSteps isWitness path = concat $ zipWith formatStep [0..] path
   where
     formatStep :: Int -> (NodeIdent, String) -> [Doc AnsiStyle]
     formatStep idx (node, desc)
-        | idx == 0 = 
+        | idx == length path - 1 = 
             [ pretty "[" <> pretty (show idx) <> pretty "] " <> 
               pretty node <+> 
-              pretty (take 20 desc) <> 
-              pretty (replicate (max 0 (30 - length (take 20 desc))) ' ') <> 
-              pretty "<- starts here" <+> 
-              (if isInitial then pretty "(initial)" else emptyDoc)
-            , pretty "     |"
-            ]
-        | idx == length path - 1 && isCycle (node, desc) =
-            [ pretty "[" <> pretty (show idx) <> pretty "] " <> 
-              pretty node <+> 
-              pretty (take 20 desc) <> 
-              pretty (replicate (max 0 (30 - length (take 20 desc))) ' ') <> 
-              pretty "--+"
-            , pretty "      ^" <> 
-              pretty (replicate 14 ' ') <> 
-              pretty "|" <> 
-              failColor (pretty "   <- " <> pretty (extractCycleDesc desc))
-            , pretty "      +" <> 
-              pretty (replicate 14 '-') <> 
-              pretty "+"
+              pretty "  |  " <+> 
+              pretty desc
             ]
         | otherwise = 
             [ pretty "[" <> pretty (show idx) <> pretty "] " <> 
               pretty node <+> 
-              pretty (take 20 desc) <> 
-              pretty (replicate (max 0 (30 - length (take 20 desc))) ' ') <> 
-              pretty "<- " <> pretty (extractStepDesc desc)
-            , pretty "     |"
+              pretty "  |  " <+> 
+              pretty desc
+            , pretty "     ↓"
             ]
-      where
-        isInitial = "initial" `elem` words desc || "starts" `elem` words desc
-        isCycle (_, d) = "loop" `elem` words d || "cycle" `elem` words d
-        extractCycleDesc d = if "loop" `elem` words d || "cycle" `elem` words d 
-                             then takeWhile (/= '\n') d 
-                             else d
-        extractStepDesc d = takeWhile (/= '\n') d
 
 -- Helper: Pretty print de un conjunto de nodos
 ppNodeSet :: Nodes -> Doc AnsiStyle
