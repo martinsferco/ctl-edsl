@@ -193,7 +193,7 @@ unaryQuantifier = try (forallQuantifier >> circle >> SUQuantifier AC <$> unaryQu
 
 binaryQuantifier :: P SFormula
 binaryQuantifier = try  (forallQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
-                        (existsQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux)
+                        (existsQuantifier >> (uncurry $ SBQuantifier EU) <$> brackets binaryAux)
 
   where binaryAux = do  leftFormula <- formulaExpr'
                         reserved "U"
