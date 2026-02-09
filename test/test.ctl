@@ -135,11 +135,11 @@ M3, _c |= q
 // Fórmulas sin modelo (IsSatis)
 // ==========================
 
-|= p
-|= p -> p
-|= E<> p
-|= A[] (p -> E<> q)
-|= E[p U q]
+|= p as file
+|= p -> p as file
+|= E<> p as file
+|= A[] (p -> E<> q) as file
+|= E[p U q] as file
 
 // ==========================
 // Export
