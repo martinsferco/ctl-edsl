@@ -2,10 +2,11 @@
 
 module Main ( main ) where
 
-import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, getMode, getTy, getDefinitions, getLastFile, setLastFile )
+import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, getMode, getTy, getDefinitions, getLastFile, setLastFile, failCTL, searchDef )
 import Parser ( P, program, sentence, runP )
-import PrettyPrinter ( ppSentence )
+import PrettyPrinter ( ppSentence, ppValue )
 import TypeCheck
+import Common ( VarIdent )
 import Global
 import Error
 import Eval
@@ -15,16 +16,17 @@ import Control.Exception ( IOException, catch )
 import Control.Applicative ()
 import Control.Monad.Except
 import Control.Monad.Trans
-import Control.Monad (when)
+import Control.Monad ( when, unless )
 
 import Data.Char ( isSpace )
-import Data.List ( isPrefixOf, intersperse )
+import Data.List ( isPrefixOf, intersperse, nub )
 
 import Options.Applicative
 
 import System.Console.Haskeline
 import System.Exit
 import System.IO
+
 
 main :: IO ()
 main = main'
@@ -46,60 +48,41 @@ main' = execParser interpreterOpts >>= go
 
       _           -> runOrFailCTL (Conf programMode) $ mapM_ handleFile files
 
-customSettings :: Settings IO
-customSettings = defaultSettings { historyFile = Just ".ctli_history" }
-
-
-runOrFailCTL :: Conf -> CTL a -> IO a
-runOrFailCTL conf m = do
-  result <- runCTL m conf
-  case result of
-    Left err -> do
-      hPrint stderr err
-      exitWith (ExitFailure 1)
-    Right v -> return v
-
-runOrFailInputT :: Conf -> CTL a -> InputT IO a
-runOrFailInputT conf m = do
-  result <- liftIO $ runCTL m conf
-  case result of
-    Left err -> do
-      liftIO $ hPrint stderr err
-      liftIO $ exitWith (ExitFailure 1)
-    Right v -> return v
-
-
-parseConf :: Parser Mode 
-parseConf = flag' TypeCheck   (long "typecheck"   <> short 't' <> help "Chequea los tipos del programa.") <|>
-            flag' Interactive (long "interactive" <> short 'i' <> help "Abre el intérprete del lenguaje.") <|>
-            flag  Eval Eval   (long "eval"        <> short 'e' <> help "Evalúa el programa.")
-
-parseArgs :: Parser (Mode, [FilePath])
-parseArgs = pure (,) <*> parseConf <*> many (argument str (metavar "FILES..."))
-
 
 handleFile ::  MonadCTL m => FilePath -> m()
 handleFile file = do
   setLastFile file
   loadProgram file >>= handleProgram
 
-handleProgram :: MonadCTL m => Program -> m()
-handleProgram = mapM_ handleSentence
-
 loadProgram ::  MonadCTL m => FilePath -> m Program
 loadProgram file = do
     let filename = reverse (dropWhile isSpace (reverse file))
     x <- liftIO $ catch (readFile filename)
                (\e -> do let err = show (e :: IOException)
-                         hPutStrLn stderr ("No se pudo abrir el archivo " ++ filename ++ ": " ++ err)
+                         hPutStrLn stderr ("Could not open the file " ++ filename ++ ": " ++ err)
                          return "")
     parseCTL filename program x
 
+handleProgram :: MonadCTL m => Program -> m()
+handleProgram p = notRepeatedDefinitions p >> mapM_ handleSentence p
 
-parseCTL ::  MonadCTL m => String -> P a -> String -> m a
-parseCTL filename p x = case runP p x filename of
-                  Left e  -> throwError (ParseErr e)
-                  Right r -> return r
+notRepeatedDefinitions :: MonadCTL m => Program -> m ()
+notRepeatedDefinitions p = do 
+  let defs = filter isDefinition p
+  varNames <- mapM getDefinitionName defs
+  let duplicates = nub [x | x <- varNames, length (filter (== x) varNames) > 1]
+  unless (null duplicates) $ 
+    failCTL $ "Multiple definitions of the variable " ++ head duplicates
+
+  where
+    isDefinition :: Sentence -> Bool
+    isDefinition (Def _ _ _ _) = True
+    isDefinition _             = False
+
+    getDefinitionName :: MonadCTL m => Sentence -> m VarIdent
+    getDefinitionName (Def _ v _ _) = return v
+    getDefinitionName _             = failCTL "Internal error: expected definition"
+
 
 
 handleSentence :: MonadCTL m => Sentence -> m()
@@ -117,9 +100,33 @@ handleSentence s = do
       Eval        -> evalSentence s
 
 
+-- Interactive MAIN
+data Command = InteractiveSentence String
+             | LoadFile String
+             | FindType VarIdent
+             | Show VarIdent
+             | Browse
+             | Reload
+             | Quit 
+             | Help
+             | NoCommand
+
+data InteractiveCommand = Cmd [String] String (String -> Command) String
+
+interactiveCommands :: [InteractiveCommand]
+interactiveCommands = 
+  [ Cmd [":browse", ":b"] ""       (const Browse) "Ver las definiciones en el scope global."
+  , Cmd [":load",   ":l"] "<file>" LoadFile       "Cargar un programa desde un archivo."
+  , Cmd [":reload", ":r"] ""       (const Reload) "Volver a cargar el último archivo."
+  , Cmd [":type",   ":t"] "<def>"  FindType       "Encontrar el tipo de una definicion global."
+  , Cmd [":show",   ":s"] "<def>"  Show           "Encontrar el tipo de una definicion global."
+  , Cmd [":help",   ":h"] ""       (const Help)   "Mostar listado de comandos disponibles."
+  , Cmd [":quit",   ":q"] ""       (const Quit)   "Salir del intérprete." ]
+
+
+
 interactiveLoop :: MonadCTL m => m ()
 interactiveLoop = printCTL interactiveTitle >> repl
-
 
 repl :: MonadCTL m => m ()
 repl = do 
@@ -131,6 +138,7 @@ repl = do
     ioExceptionCatcher :: IOException -> IO (Maybe String)
     ioExceptionCatcher _ = return Nothing
 
+
 handleInputLine :: MonadCTL m => Maybe String -> m ()
 handleInputLine line = 
   case line of
@@ -141,13 +149,11 @@ handleInputLine line =
       continueLoop <- handleCommand comm
       when continueLoop repl  
 
-
 interpretCommand :: MonadCTL m => String -> m Command
 interpretCommand lineContent = 
   if ":" `isPrefixOf` lineContent
   then interpretInteractiveCommand lineContent
   else return (InteractiveSentence lineContent)
-
 
 interpretInteractiveCommand :: MonadCTL m => String -> m Command
 interpretInteractiveCommand lineContent = do
@@ -193,6 +199,11 @@ handleCommand (FindType var) =
                  (printCTL . show)
       return True
 
+handleCommand (Show var) = 
+  do catchError (searchDef var >>= printCTL . ppValue)
+                (printCTL . show)
+     return True
+
 handleCommand Reload = 
   do  currentFile <- getLastFile
       case currentFile of
@@ -200,28 +211,10 @@ handleCommand Reload =
         Just file -> handleCommand (LoadFile file)
 
 
-data Command = InteractiveSentence String
-             | LoadFile String
-             | FindType String
-             | Browse
-             | Reload
-             | Quit 
-             | Help
-             | NoCommand
-
-
-data InteractiveCommand = Cmd [String] String (String -> Command) String
-
-interactiveCommands :: [InteractiveCommand]
-interactiveCommands = 
-  [ Cmd [":browse", ":b"] ""       (const Browse) "Ver las definiciones en el scope global."
-  , Cmd [":load",   ":l"] "<file>" LoadFile       "Cargar un programa desde un archivo."
-  , Cmd [":reload", ":r"] ""       (const Reload) "Volver a cargar el último archivo."
-  , Cmd [":type",   ":t"] "<def>"  FindType       "Encontrar el tipo de una definicion global."
-  , Cmd [":help",   ":h"] ""       (const Help)   "Mostar listado de comandos disponibles."
-  , Cmd [":quit",   ":q"] ""       (const Quit)   "Salir del intérprete."
-  ]
-
+interactiveTitle, interactivePrompt :: String 
+interactiveTitle = "Intérprete de CTLI (Computational Tree Logic Interpreter).\n" ++
+                   "Escriba :h para recibir ayuda."
+interactivePrompt = "CTLI> "
 
 helpCommandsText :: [InteractiveCommand] -> String
 helpCommandsText cs = unlines $
@@ -237,8 +230,41 @@ helpCommandsText cs = unlines $
           padding = replicate ((24 - length cmdText) `max` 2) ' '
       in cmdText ++ padding ++ desc
 
+customSettings :: Settings IO
+customSettings = defaultSettings { historyFile = Just ".ctli_history" }
 
-interactiveTitle, interactivePrompt :: String 
-interactiveTitle = "Intérprete de CTLI (Computational Tree Logic Interpreter).\n" ++
-                   "Escriba :h para recibir ayuda."
-interactivePrompt = "CTLI> "
+
+
+
+
+
+runOrFailCTL :: Conf -> CTL a -> IO a
+runOrFailCTL conf m = do
+  result <- runCTL m conf
+  case result of
+    Left err -> do
+      hPrint stderr err
+      exitWith (ExitFailure 1)
+    Right v -> return v
+
+runOrFailInputT :: Conf -> CTL a -> InputT IO a
+runOrFailInputT conf m = do
+  result <- liftIO $ runCTL m conf
+  case result of
+    Left err -> do
+      liftIO $ hPrint stderr err
+      liftIO $ exitWith (ExitFailure 1)
+    Right v -> return v
+
+parseCTL ::  MonadCTL m => String -> P a -> String -> m a
+parseCTL filename p x = case runP p x filename of
+                  Left e  -> throwError (ParseErr e)
+                  Right r -> return r
+
+parseConf :: Parser Mode 
+parseConf = flag' TypeCheck   (long "typecheck"   <> short 't' <> help "Chequea los tipos del programa.") <|>
+            flag' Interactive (long "interactive" <> short 'i' <> help "Abre el intérprete del lenguaje.") <|>
+            flag  Eval Eval   (long "eval"        <> short 'e' <> help "Evalúa el programa.")
+
+parseArgs :: Parser (Mode, [FilePath])
+parseArgs = pure (,) <*> parseConf <*> many (argument str (metavar "FILES..."))

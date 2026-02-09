@@ -9,7 +9,6 @@ import Common
 import Lang
 import Global
 
-import Control.Applicative (Alternative) 
 import Control.Monad (unless)
 import Control.Monad.State
 import Control.Monad.Except
@@ -17,7 +16,7 @@ import Control.Monad.Reader
 import System.IO
 
 
-class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m, Alternative m) 
+class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m) 
   => MonadCTL m where
 
 
@@ -38,18 +37,11 @@ printCTL = liftIO . putStrLn
 
 addDef :: MonadCTL m => VarIdent -> Type -> Value -> m ()
 addDef var ty val = do  
-  notExists var
   modify $ \state ->
-    state { definitions = (var, ty, val) : definitions state }
-
-  where
-    notExists :: MonadCTL m => VarIdent -> m ()
-    notExists var = do
-      s <- get
-      case filter (matchsName var) (definitions s) of 
-        _ : _ -> failCTL ("variable " ++ var ++ " is already defined.")
-        []    -> return ()
-
+    let defs = definitions state
+        defsWithoutVar = filter (\(v, _, _) -> v /= var) defs
+        newDefs = (var, ty, val) : defsWithoutVar
+    in state { definitions = newDefs }
 
 getDefinitions :: MonadCTL m => m ([(VarIdent, Type)])
 getDefinitions = do state <- get

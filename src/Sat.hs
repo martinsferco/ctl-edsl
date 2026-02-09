@@ -34,7 +34,7 @@ models ts form = do satNodes <- sat ts form
                            , satNodes    = satNodes
                            , checkType   = CheckInitials initialNodes
                            , examplePath = example
-                           , description = "ja" }
+                           , description = "" }
 
 
 isValid :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m EvalResult
@@ -48,7 +48,7 @@ isValid ts node form = do satNodes <- sat ts form
                                  , satNodes    = satNodes
                                  , checkType   = CheckNode node
                                  , examplePath = example
-                                 , description = "locura" }
+                                 , description = "" }
 
 
 isSatis :: MonadCTL m => Formula -> m (Maybe TSystem)
@@ -199,7 +199,7 @@ counterExample node ts (UQuantifier EC p)     = return [(node, "All neighboors o
 counterExample node ts (UQuantifier AR p)     = findCycleOutsideSatFormula ts node p 
 counterExample node ts (UQuantifier ER p)     = return [(node, "All traces starting at " ++ node ++ ", never reach an state that satifies " ++ ppFormula p)]         
 counterExample node ts (UQuantifier AS p)     = findPathOutsideSatFormula ts node p
-counterExample node ts (UQuantifier ES p)     = return [(node, "All traces starting at " ++ node ++ ", have an state that does not satisfies " ++ ppFormula p)]         
+counterExample node ts (UQuantifier ES p)     = return [(node, "All traces starting at " ++ node ++ ", reach an state that does not satisfies " ++ ppFormula p)]         
 counterExample node ts (BQuantifier AU p q)   = findForallUntilCounterExample ts node p q
 counterExample node ts (BQuantifier EU p q)   = return [(node, "All traces starting at " ++ node ++ ", do not satify the semantic of the Until operator")]         
 
@@ -276,7 +276,7 @@ addPathDescription formula endFormula path = map (\n -> (n, modelsText True n fo
 
 modelsText :: Bool -> NodeIdent -> Formula -> String
 modelsText isModel node formula = "M," ++ node ++ " " ++ symbol ++ ppFormula formula
-  where symbol = if isModel then "⊨" else "⊭"
+  where symbol = if isModel then "⊨ " else "⊭ "
 
 
 witness :: MonadCTL m => NodeIdent -> TSystem -> Formula -> m ExamplePath
@@ -297,9 +297,9 @@ witness node ts (UQuantifier EC p)     = do satP <- sat ts p
                                             goodNeigh <- choice (neighs `Set.intersection` satP)
                                             return [ (node, "Starting node"),(goodNeigh, modelsText True goodNeigh p)]
 
-witness node ts (UQuantifier AR p)     = return [(node, "All traces starting at " ++ node ++ " reach an state that satifies" ++ ppFormula p)]          
+witness node ts (UQuantifier AR p)     = return [(node, "All traces starting at " ++ node ++ " reach an state that satifies " ++ ppFormula p)]          
 witness node ts (UQuantifier ER p)     = findPathToSatFormula ts node p
-witness node ts (UQuantifier AS p)     = return [(node, "All traces starting at " ++ node ++ " do not have an state that does not satifies " ++ ppFormula p)]          
+witness node ts (UQuantifier AS p)     = return [(node, "All traces starting at " ++ node ++ " do not reach an state that does not satifies " ++ ppFormula p)]          
 witness node ts (UQuantifier ES p)     = findCycleInSatFormula ts node p 
 witness node ts (BQuantifier AU p q)   = return [(node, "All traces starting at " ++ node ++ " satisfy the semantic of the until operator ")]          
 witness node ts (BQuantifier EU p q)   = findExistUntilWitness ts node p q
