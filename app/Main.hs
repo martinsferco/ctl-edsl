@@ -1,4 +1,6 @@
-module Main where
+{-# OPTIONS_GHC -Wno-x-partial #-}
+
+module Main ( main ) where
 
 import MonadCTL ( MonadCTL, CTL, runCTL, printCTL, getMode, getTy, getDefinitions, getLastFile, setLastFile )
 import Parser ( P, program, sentence, runP )
@@ -10,7 +12,7 @@ import Eval
 import Lang
 
 import Control.Exception ( IOException, catch )
-import Control.Applicative ((<|>), many)
+import Control.Applicative ()
 import Control.Monad.Except
 import Control.Monad.Trans
 import Control.Monad (when)
@@ -37,12 +39,12 @@ main' = execParser interpreterOpts >>= go
      <> header "Intérprete de Computational Tree Logic - ALP 2026" )
 
     go :: (Mode,[FilePath]) -> IO ()
-    go (mode, files) = case mode of 
-      Interactive -> runInputT customSettings $ runOrFailInputT (Conf mode) $ do
+    go (programMode, files) = case programMode of 
+      Interactive -> runInputT customSettings $ runOrFailInputT (Conf programMode) $ do
         mapM_ handleFile files
         interactiveLoop
 
-      _           -> runOrFailCTL (Conf mode) $ mapM_ handleFile files
+      _           -> runOrFailCTL (Conf programMode) $ mapM_ handleFile files
 
 customSettings :: Settings IO
 customSettings = defaultSettings { historyFile = Just ".ctli_history" }
@@ -101,18 +103,18 @@ parseCTL filename p x = case runP p x filename of
 
 
 handleSentence :: MonadCTL m => Sentence -> m()
-handleSentence sentence = do  
-    typeCheckSentence sentence
-    mode <- getMode
-    case mode of
+handleSentence s = do  
+    typeCheckSentence s
+    currentMode <- getMode
+    case currentMode of
       TypeCheck   -> do
-        addDefinition sentence  
-        printCTL $ ppSentence sentence
+        addDefinition s  
+        printCTL $ ppSentence s
       
       Interactive -> do 
-        addDefinition sentence  
+        addDefinition s  
       
-      Eval        -> evalSentence sentence
+      Eval        -> evalSentence s
 
 
 interactiveLoop :: MonadCTL m => m ()
@@ -135,8 +137,8 @@ handleInputLine line =
     Nothing          -> return ()
     Just ""          -> repl
     Just lineContent -> do
-      command <- interpretCommand lineContent  
-      continueLoop <- handleCommand command
+      comm <- interpretCommand lineContent  
+      continueLoop <- handleCommand comm
       when continueLoop repl  
 
 
@@ -171,8 +173,8 @@ handleCommand NoCommand = return True
 handleCommand Help      = liftIO (putStr $ helpCommandsText interactiveCommands) >> return True
 
 handleCommand Browse = 
-  do  definitions <- getDefinitions
-      printCTL (unlines $ map (\(v,ty) -> v ++ " :: " ++ show ty) definitions)
+  do  loadedDefinitions <- getDefinitions
+      printCTL (unlines $ map (\(v,ty) -> v ++ " :: " ++ show ty) loadedDefinitions)
       return True
 
 handleCommand (InteractiveSentence sentenceLine) =
@@ -192,8 +194,8 @@ handleCommand (FindType var) =
       return True
 
 handleCommand Reload = 
-  do  lastFile <- getLastFile
-      case lastFile of
+  do  currentFile <- getLastFile
+      case currentFile of
         Nothing   -> printCTL "No existen archivos cargados previamente." >> return True
         Just file -> handleCommand (LoadFile file)
 

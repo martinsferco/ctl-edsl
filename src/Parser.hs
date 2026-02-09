@@ -1,4 +1,4 @@
-module Parser where
+module Parser ( P, runP, program, sentence ) where
 
 import Common
 import Lang 
@@ -27,8 +27,12 @@ languageDefintion = emptyDef
 
   , reservedNames   = ["define", "Model", "Nodes", "Labels",
                        "Formula", "export", "F", "T", "A", "E", "U", "as"]
-  , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()", "<>", "->", ","]
+  , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()",
+                       "<>", "->", ",", "⊤", "⊥", "∀", "∃", "○", "◇", "□", "⊨",
+                       "∧", "∨", "→", "¬"]
   }
+
+
 
 whiteSpace :: P ()
 whiteSpace = Tok.whiteSpace lexer
@@ -91,6 +95,41 @@ typeParser = try (reserved "Model"       >> return ModelTy)       <|>
              try (reserved "Formula"     >> return FormulaTy) 
 
 
+forallQuantifier :: P ()
+forallQuantifier = try (reserved "A") <|> reserved "∀"
+
+existsQuantifier :: P ()
+existsQuantifier = try (reserved "E") <|> reserved "∃"
+
+bottom :: P ()
+bottom = try (reserved "F") <|> reservedOp "⊥"
+
+top :: P ()
+top = try (reserved "T") <|> reservedOp "⊤"
+
+circle :: P ()
+circle = try (reserved "()") <|> reservedOp "○"
+
+rombus :: P ()
+rombus = try (reserved "<>") <|> reservedOp "◇"
+
+square :: P ()
+square = try (reserved "[]") <|> reservedOp "□"
+
+modelsFormula :: P ()
+modelsFormula = try (reserved "|=") <|> reservedOp "⊨"
+
+andOp :: P ()
+andOp = try (reserved "&&") <|> reservedOp "∧"
+
+orOp:: P ()
+orOp= try (reserved "||") <|> reservedOp "∨"
+
+implies :: P ()
+implies = try (reserved "->") <|> reservedOp "→"
+
+negation :: P ()
+negation = try (reserved "!") <|> reservedOp "!"
 
 expr :: P Expr
 expr = try modelExpr  <|>
@@ -103,16 +142,16 @@ labelsExpr :: P Expr
 labelsExpr = LabelsExpr <$> getPos <*> braces (many labelsExprAux)
   where labelsExprAux = do node <- nodeIdent
                            reservedOp "<=" 
-                           label <- braces $ commaSep atomIdent
-                           return (node, label)
+                           nodeLabel <- braces $ commaSep atomIdent
+                           return (node, nodeLabel)
 
 modelExpr :: P Expr
 modelExpr = angles modelExprAux
   where modelExprAux = do pos <- getPos
                           transExpr <- expr
                           reservedOp ","
-                          labelsExpr <- expr
-                          return $ ModelExpr pos transExpr labelsExpr
+                          nodeLabelsExpr <- expr
+                          return $ ModelExpr pos transExpr nodeLabelsExpr
 
 nodesExpr :: P Expr
 nodesExpr = NodesExpr <$> getPos <*> braces (many1 nodesExprAux)
@@ -132,29 +171,29 @@ formulaExpr :: P Expr
 formulaExpr = FormulaExpr <$> getPos <*> formulaExpr'
   
 formulaExpr' :: P SFormula
-formulaExpr' = chainr1 impliesTerm (reservedOp "->" >> return (SBinaryOp Implies))
+formulaExpr' = chainr1 impliesTerm (implies >> return (SBinaryOp Implies))
 
 impliesTerm :: P SFormula
-impliesTerm = chainl1 orTerm (reservedOp "||" >> return (SBinaryOp Or))
+impliesTerm = chainl1 orTerm (orOp >> return (SBinaryOp Or))
 
 orTerm :: P SFormula
-orTerm = chainl1 andTerm (reservedOp "&&" >> return (SBinaryOp And))
+orTerm = chainl1 andTerm (andOp >> return (SBinaryOp And))
 
 andTerm :: P SFormula
 andTerm = try unaryQuantifier <|> binaryQuantifier
 
 unaryQuantifier :: P SFormula
-unaryQuantifier = try (reserved "A" >> reservedOp "()"  >> SUQuantifier AC <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reservedOp "()"  >> SUQuantifier EC <$> unaryQuantifier) <|>
-                  try (reserved "A" >> reservedOp "<>" >> SUQuantifier AR <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reservedOp "<>" >> SUQuantifier ER <$> unaryQuantifier) <|>
-                  try (reserved "A" >> reservedOp "[]" >> SUQuantifier AS <$> unaryQuantifier) <|>
-                  try (reserved "E" >> reservedOp "[]" >> SUQuantifier ES <$> unaryQuantifier) <|>
+unaryQuantifier = try (forallQuantifier >> circle >> SUQuantifier AC <$> unaryQuantifier) <|>
+                  try (existsQuantifier >> circle >> SUQuantifier EC <$> unaryQuantifier) <|>
+                  try (forallQuantifier >> rombus >> SUQuantifier AR <$> unaryQuantifier) <|>
+                  try (existsQuantifier >> rombus >> SUQuantifier ER <$> unaryQuantifier) <|>
+                  try (forallQuantifier >> square >> SUQuantifier AS <$> unaryQuantifier) <|>
+                  try (existsQuantifier >> square >> SUQuantifier ES <$> unaryQuantifier) <|>
                       quantifierTerm
 
 binaryQuantifier :: P SFormula
-binaryQuantifier = try  (reserved "A" >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
-                        (reserved "E" >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux)
+binaryQuantifier = try  (forallQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
+                        (existsQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux)
 
   where binaryAux = do  leftFormula <- formulaExpr'
                         reserved "U"
@@ -162,14 +201,14 @@ binaryQuantifier = try  (reserved "A" >> (uncurry $ SBQuantifier AU) <$> bracket
                         return (leftFormula, rightFormula)
 
 quantifierTerm :: P SFormula
-quantifierTerm = try (reservedOp "!" >> SNot <$> quantifierTerm) <|>
+quantifierTerm = try (negation >> SNot <$> quantifierTerm) <|>
                  atomicTerm
 
 atomicTerm :: P SFormula 
-atomicTerm =  try (parens formulaExpr')       <|>
-              try (reserved "T" >> return ST) <|>
-              try (reserved "F" >> return SF) <|>
-              try (SVar <$> varIdent)         <|>
+atomicTerm =  try (parens formulaExpr') <|>
+              try (top >> return ST)    <|>
+              try (bottom >> return SF) <|>
+              try (SVar <$> varIdent)   <|>
                   (SAtom <$> atomIdent)     
 
 
@@ -188,36 +227,36 @@ defSentence = do  pos <- getPos
                   reservedOp "::"
                   varType <- typeParser
                   reservedOp "="
-                  varExpr <- expr
-                  return $ Def pos var varType varExpr 
+                  definitionExpr <- expr
+                  return $ Def pos var varType definitionExpr
 
 exportSentence :: P Sentence 
 exportSentence = do pos <- getPos
                     reserved "export" 
-                    model <- expr
+                    exportedModel <- expr
                     reserved "as"
                     fileName <- identifier
-                    return $ Export pos model fileName
+                    return $ Export pos exportedModel fileName
 
 modelsSentence :: P Sentence 
 modelsSentence = do pos <- getPos
-                    model <- expr
-                    reservedOp "|="
-                    formula <- expr
-                    return $ Models pos model formula
+                    modelE <- expr
+                    modelsFormula
+                    formulaE <- expr
+                    return $ Models pos modelE formulaE
 
 isValidSentence :: P Sentence
 isValidSentence = do  pos <- getPos
-                      model <- expr
+                      modelE <- expr
                       reservedOp ","
                       node <- nodeIdent
-                      reservedOp "|="
-                      formula <- expr
-                      return $ IsValid pos model node formula
+                      modelsFormula
+                      formulaE <- expr
+                      return $ IsValid pos modelE node formulaE
  
 isSatisSentence :: P Sentence
 isSatisSentence = do  pos <- getPos
-                      reservedOp "|="
+                      modelsFormula
                       form <- expr
                       return $ IsSatis pos form
 
@@ -229,19 +268,3 @@ program = many sentence
 
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
-
-parseExpr :: String -> Expr
-parseExpr s = case runP expr s "" of 
-                Right t -> t
-                Left e -> error ("no parse: " ++ show s)
-
-parseSentence :: String -> Sentence
-parseSentence s = case runP sentence s "" of
-                    Right t -> t
-                    Left e -> error ("no parse: " ++ show s)
-
-parseProgram :: String -> Program
-parseProgram s = case runP program s "" of
-                    Right t -> t
-                    Left e -> error ("no parse: " ++ show s)
-
