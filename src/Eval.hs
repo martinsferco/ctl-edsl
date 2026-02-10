@@ -17,16 +17,16 @@ import Control.Monad ( unless )
 
 
 evalSentence :: MonadCTL m => Sentence -> m()
-evalSentence d@(Def _ var ty e) = addDefinition d
+evalSentence d@(Def _ _ _ _)  = addDefinition d
 
-evalSentence (Export _ e f)     = do  v <- reduceExpr e
-                                      ts <- expectsModel v
-                                      exportTSystem ts f
+evalSentence (Export _ e f)   = do  v <- reduceExpr e
+                                    ts <- expectsModel v
+                                    exportTSystem ts f
 
-evalSentence (IsSatis _ e f)      = do  v <- reduceExpr e
-                                        formula <- expectsFormula v
-                                        maybeTS <- isSatis formula
-                                        maybeExportTSystem maybeTS f
+evalSentence (IsSatis _ e f)  = do  v <- reduceExpr e
+                                    form <- expectsFormula v
+                                    maybeTS <- isSatis form
+                                    maybeExportTSystem maybeTS f
                                       
 evalSentence (Models _ m f)   =   do  vm <- reduceExpr m
                                       ts <- expectsModel vm
@@ -60,16 +60,16 @@ addDefinition _ = return ()
 
 
 reduceExpr :: MonadCTL m => Expr -> m Value
-reduceExpr (FormulaExpr _ sformula)   = Formula <$> replaceVarsFormula sformula
-reduceExpr (ModelExpr _ nodes labels) = do  vNodes <- reduceExpr nodes
-                                            infoNodes <- expectsNodes vNodes
-                                            vLabels <- reduceExpr labels
-                                            labels <- expectsLabels vLabels
-                                            Model <$> buildTSystem infoNodes labels
+reduceExpr (FormulaExpr _ form)   = Formula <$> replaceVarsFormula form
+reduceExpr (ModelExpr _ n l)      = do vNodes <- reduceExpr n
+                                       mInfoNodes <- expectsNodes vNodes
+                                       vLabels <- reduceExpr l
+                                       mLabels <- expectsLabels vLabels
+                                       Model <$> buildTSystem mInfoNodes mLabels
 
-reduceExpr (LabelsExpr _ labels)      = return $ Labels (collectByNodes labels)
-reduceExpr (NodesExpr _ nodes)        = return $ Nodes (constructInfonodes nodes)
-reduceExpr (VarExpr _ var)            = searchDef var
+reduceExpr (LabelsExpr _ l)       = return $ Labels (collectByNodes l)
+reduceExpr (NodesExpr _ n)        = return $ Nodes (constructInfonodes n)
+reduceExpr (VarExpr _ var)        = searchDef var
 
 
 
@@ -94,8 +94,8 @@ replaceVarsFormula (SVar var)              = do varForm <- searchDef var
 
 
 constructInfonodes :: [InfoNode] -> InfoNodes
-constructInfonodes info = InfoNodes (Set.fromList initialNodes) transFunction
-  where initialNodes = [ n | (n, initial, _) <- info, initial ]
+constructInfonodes info = InfoNodes (Set.fromList initNodes) transFunction
+  where initNodes = [ n | (n, initial, _) <- info, initial ]
         transFunction = collectByNodes [ (n, neigh) | (n, _, neigh) <- info ]
 
 collectByNodes :: Ord b => [(NodeIdent, [b])] -> Map.Map NodeIdent (Set.Set b)

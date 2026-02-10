@@ -14,5 +14,4 @@ data EvalResult = EvalResult
   , satNodes     :: Nodes
   , checkType    :: CheckNodeType
   , examplePath  :: ExamplePath
-  , description  :: String
   } 

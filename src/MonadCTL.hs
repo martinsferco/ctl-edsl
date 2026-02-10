@@ -13,7 +13,6 @@ import Control.Monad (unless)
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Reader
-import System.IO
 
 
 class (MonadIO m, MonadState GState m, MonadError Error m,  MonadReader Conf m) 
@@ -24,28 +23,28 @@ getMode :: MonadCTL m => m Mode
 getMode = asks mode
 
 getLastFile :: MonadCTL m => m (Maybe String)
-getLastFile = do state <- get
-                 let file = lastFile state
+getLastFile = do s <- get
+                 let file = lastFile s
                  if file == ""  then return Nothing
                                 else return $ Just file
 
 setLastFile :: MonadCTL m => String -> m ()
-setLastFile file = modify (\state -> state { lastFile = file })
+setLastFile file = modify (\s -> s { lastFile = file })
 
 printCTL :: MonadCTL m => String -> m ()
 printCTL = liftIO . putStrLn
 
 addDef :: MonadCTL m => VarIdent -> Type -> Value -> m ()
 addDef var ty val = do  
-  modify $ \state ->
-    let defs = definitions state
+  modify $ \s ->
+    let defs = definitions s
         defsWithoutVar = filter (\(v, _, _) -> v /= var) defs
         newDefs = (var, ty, val) : defsWithoutVar
-    in state { definitions = newDefs }
+    in s { definitions = newDefs }
 
 getDefinitions :: MonadCTL m => m ([(VarIdent, Type)])
-getDefinitions = do state <- get
-                    return $ map (\(v,ty,_) -> (v,ty)) (definitions state)
+getDefinitions = do s <- get
+                    return $ map (\(v,ty,_) -> (v,ty)) (definitions s)
 
 getTy :: MonadCTL m => VarIdent -> m Type
 getTy = selectDefinition (\(_, ty, _) -> ty)
@@ -55,8 +54,8 @@ searchDef = selectDefinition (\(_, _, value) -> value)
 
 selectDefinition :: MonadCTL m => (Definition -> a) -> VarIdent -> m a
 selectDefinition select var = do
-  state <- get 
-  case filter (matchsName var) (definitions state) of
+  s <- get 
+  case filter (matchsName var) (definitions s) of
     def : _  -> return $ select def
     _        -> failCTL ("variable " ++ var ++ " is not defined.")
 

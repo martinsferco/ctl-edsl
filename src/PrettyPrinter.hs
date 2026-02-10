@@ -4,7 +4,7 @@ import Lang
 import Common
 import EvalResult
 import Prettyprinter
-import Model.TSystem
+import Model.TSystem ( TSystem(..), Graph(..) )
 import Prettyprinter.Render.Terminal
 import Data.Text (unpack)
 
@@ -99,15 +99,15 @@ labelingToLabels lf =
 --------------------------------------------------------------------------------
 
 graphToInfoNodes :: Graph -> [InfoNode]
-graphToInfoNodes (Graph _ inits trans) =
-  [ (n, Set.member n inits, Set.toList neighs)
-  | (n, neighs) <- Map.toList trans
+graphToInfoNodes (Graph _ initials modelTransitions) =
+  [ (n, Set.member n initials, Set.toList neighs)
+  | (n, neighs) <- Map.toList modelTransitions
   ]
 
 infoNodesToList :: InfoNodes -> [InfoNode]
-infoNodesToList (InfoNodes inits trans) =
-  [ (n, Set.member n inits, Set.toList neighs)
-  | (n, neighs) <- Map.toList trans
+infoNodesToList (InfoNodes initials modelTransitions) =
+  [ (n, Set.member n initials, Set.toList neighs)
+  | (n, neighs) <- Map.toList modelTransitions
   ]
 
 --------------------------------------------------------------------------------
@@ -298,7 +298,7 @@ nodesSection result = vsep
     [ title " Sat Nodes", pretty "  " <> ppNodeSet (satNodes result), emptyDoc, checkTypeDoc ]
   where
     checkTypeDoc = case checkType result of
-        CheckInitials nodes -> vsep [ title " Initial Nodes", pretty "  " <> ppNodeSet nodes ]
+        CheckInitials initNodes -> vsep [ title " Initial Nodes", pretty "  " <> ppNodeSet initNodes ]
         CheckNode node -> vsep [ title " Checked Node", pretty "  " <> pretty node ]
 
 
@@ -306,23 +306,21 @@ verificationSection :: EvalResult -> Doc AnsiStyle
 verificationSection result = vsep
     [ title " Verification"
     , case checkType result of
-        CheckInitials inits -> verificationInitials inits
+        CheckInitials initials -> verificationInitials initials
         CheckNode node -> verificationNode node
     ]
   where
     sat = satNodes result
     
     verificationInitials :: Nodes -> Doc AnsiStyle
-    verificationInitials inits
+    verificationInitials initials
         | holds result = 
-            pretty "  " <> successColor (pretty "OK") <+> ppNodeSet inits <+> pretty "⊆" <+> ppNodeSet sat
+            pretty "  " <> successColor (pretty "OK") <+> ppNodeSet initials <+> pretty "⊆" <+> ppNodeSet sat
 
         | otherwise = 
-            let violating = Set.difference inits sat
-                total = Set.size inits
-                failing = Set.size violating
+            let violating = Set.difference initials sat
             in vsep
-                [ pretty "  " <> failColor (pretty "FAIL") <+> ppNodeSet inits <+> pretty "⊄" <+> ppNodeSet sat
+                [ pretty "  " <> failColor (pretty "FAIL") <+> ppNodeSet initials <+> pretty "⊄" <+> ppNodeSet sat
                 , emptyDoc
                 , pretty "  Violating nodes: " <> ppNodeSet violating
                 ]
@@ -342,23 +340,28 @@ pathSection result
     | holds result = witnessPath (examplePath result)
     | otherwise = counterExamplePath (examplePath result)
 
-
 witnessPath :: [(NodeIdent, String)] -> Doc AnsiStyle
 witnessPath path = vsep
-    [ successColor (pretty " Witness Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
+    [ successColor (pretty " Witness Path") <+> pretty (pathOrigin path)
     , emptyDoc
-    , indent 2 (vsep (pathSteps True path))
+    , indent 2 (vsep (pathSteps path))
     ]
 
 counterExamplePath :: [(NodeIdent, String)] -> Doc AnsiStyle
 counterExamplePath path = vsep
-    [ failColor (pretty " Counter-Example Path") <+> pretty (if null path then "" else "(from " ++ fst (head path) ++ ")")
+    [ failColor (pretty " Counter-Example Path") <+> pretty (pathOrigin path)
     , emptyDoc
-    , indent 2 (vsep (pathSteps False path))
+    , indent 2 (vsep (pathSteps path))
     ]
 
-pathSteps :: Bool -> [(NodeIdent, String)] -> [Doc AnsiStyle]
-pathSteps isWitness path = concat $ zipWith formatStep [0..] path
+pathOrigin :: [(NodeIdent, String)] -> String
+pathOrigin []        = ""
+pathOrigin ((n,_):_) = "(from " ++ n ++ ")"
+
+
+
+pathSteps :: [(NodeIdent, String)] -> [Doc AnsiStyle]
+pathSteps path = concat $ zipWith formatStep [0..] path
   where
     formatStep :: Int -> (NodeIdent, String) -> [Doc AnsiStyle]
     formatStep idx (node, desc)
@@ -378,14 +381,14 @@ pathSteps isWitness path = concat $ zipWith formatStep [0..] path
 
 -- Helper: Pretty print de un conjunto de nodos
 ppNodeSet :: Nodes -> Doc AnsiStyle
-ppNodeSet nodes 
-    | Set.null nodes = pretty "∅" <+> pretty "(no nodes)"
-    | Set.size nodes > 10 = 
+ppNodeSet ns 
+    | Set.null ns = pretty "∅" <+> pretty "(no nodes)"
+    | Set.size ns > 10 = 
         braces $ hsep $ punctuate comma 
-            (map pretty (take 10 $ Set.toList nodes) ++ [pretty "..."])
+            (map pretty (take 10 $ Set.toList ns) ++ [pretty "..."])
     | otherwise = 
         braces $ hsep $ punctuate comma 
-            (map pretty (Set.toList nodes))
+            (map pretty (Set.toList ns))
 
 -- Render final
 ppEvalResult :: EvalResult -> String

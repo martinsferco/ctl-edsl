@@ -1,7 +1,6 @@
 module Model.TSystemMethods where
 
 import Model.TSystem
-import EvalResult
 import MonadCTL
 import Common
 
@@ -14,25 +13,24 @@ import Control.Monad.IO.Class
 import Control.Monad (unless)
 
 import Data.GraphViz
-import Data.GraphViz.Commands
 import Data.GraphViz.Attributes.Complete
 import Data.Text.Lazy (pack)
 
 
 buildTSystem :: MonadCTL m => InfoNodes -> LabelingFunction -> m TSystem
-buildTSystem infoNodes labeling = 
+buildTSystem infoNodes lab = 
   do g <- buildGraph infoNodes
      nonBlockingGraph g
-     labelCoherence g labeling
-     return $ TSystem g (completeLabeling g labeling)
+     labelCoherence g lab
+     return $ TSystem g (completeLabeling g lab)
 
 labelCoherence :: MonadCTL m => Graph -> LabelingFunction -> m ()
-labelCoherence graph labels = unless (Map.keysSet labels `Set.isSubsetOf` nodes graph)
-                                     (failCTL "Labeling function is refering to a node not defined in the graph")
+labelCoherence modelGraph labels = unless (Map.keysSet labels `Set.isSubsetOf` nodes modelGraph)
+                                          (failCTL "Labeling function is refering to a node not defined in the graph")
 
 completeLabeling :: Graph -> LabelingFunction -> LabelingFunction
-completeLabeling graph labels = 
-  let allNodes = nodes graph
+completeLabeling modelGraph labels = 
+  let allNodes = nodes modelGraph
       labeledNodes = Map.keysSet labels
       notLabeledNodes = Set.difference allNodes labeledNodes
   in Map.union (Map.fromSet (const Set.empty) notLabeledNodes) labels
@@ -41,7 +39,7 @@ getNodes :: TSystem -> Nodes
 getNodes = nodes . graph
 
 setInitialNodes :: TSystem -> Nodes -> TSystem
-setInitialNodes ts nodes = ts { graph = (graph ts) { inits = nodes } }
+setInitialNodes ts newNodes = ts { graph = (graph ts) { inits = newNodes } }
 
 getInitialNodes :: TSystem -> Nodes
 getInitialNodes = inits . graph
@@ -63,15 +61,15 @@ isNodeOf node ts =  unless (node `Set.member` (getNodes ts))
                            (failCTL $ (show node) ++ " is not a node in the transition system")
 
 buildGraph :: MonadCTL m => InfoNodes -> m Graph
-buildGraph (InfoNodes init trans) = return $ Graph allNodes init trans
-  where allNodes = Set.union (Map.keysSet trans)
-                             (Set.unions $ Map.elems trans) 
+buildGraph (InfoNodes initNodes modelTransitions) = return $ Graph allNodes initNodes modelTransitions
+  where allNodes = Set.union (Map.keysSet modelTransitions)
+                             (Set.unions $ Map.elems modelTransitions) 
 
 nonBlockingGraph :: MonadCTL m => Graph -> m ()
-nonBlockingGraph graph = if nonBlocking then return ()
+nonBlockingGraph modelGraph = if nonBlocking then return ()
                                         else failCTL "trying to define a blocking graph"
   where 
-    nonBlocking = nodes graph == Map.keysSet (trans graph)
+    nonBlocking = nodes modelGraph == Map.keysSet (trans modelGraph)
 
 findCycleInSubgraph :: MonadCTL m => TSystem -> Nodes -> NodeIdent -> m (Maybe [NodeIdent])
 findCycleInSubgraph ts validNodes start = findCycleInSubgraph' [] start
@@ -112,7 +110,7 @@ tryEach (action : rest) = do
 exportTSystem :: MonadCTL m => TSystem -> String -> m ()
 exportTSystem ts fileName = 
   do exportedGraph <- buildExportedTSystem ts
-     liftIO $ runGraphviz exportedGraph Pdf (exportFolder ++ fileName ++ fileExtension)
+     _ <- liftIO $ runGraphviz exportedGraph Pdf (exportFolder ++ fileName ++ fileExtension)
      printCTL "[] Transition system exported !"
   where 
     fileExtension = ".pdf"
@@ -127,7 +125,7 @@ buildExportedTSystem ts =
       
   where 
     paramsExport = nonClusteredParams
-      { fmtNode = \(n, (label, initial)) -> [ Label (StrLabel $ pack label),
+      { fmtNode = \(_, (label, initial)) -> [ Label (StrLabel $ pack label),
                                               Shape (if initial then DoubleCircle else Circle) ]
       , fmtEdge = const []
       }
@@ -149,4 +147,4 @@ buildExportedEdges ts = concat <$> mapM buildTransitions (Set.toList $ getNodes 
 
 
 buildLabel :: LabelingFunction -> NodeIdent -> String
-buildLabel labeling node = node ++ ": {" ++ intercalate "," (Set.toList $ labeling Map.! node) ++ "}"
+buildLabel label node = node ++ ": {" ++ intercalate "," (Set.toList $ label Map.! node) ++ "}"

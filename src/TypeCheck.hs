@@ -64,22 +64,22 @@ freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
 freeVariables (SVar var)           = Set.singleton var
 
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
-typeCheckSentence (Def p v ty expr)        = unlessCTL (expr `exprOfType` ty) $
-                                                failPosCTL p $ (notOfTypeMsg v ty)
+typeCheckSentence (Def p v ty expr)     = unlessCTL (expr `exprOfType` ty) $
+                                            failPosCTL p $ (notOfTypeMsg v ty)
 
-typeCheckSentence (Export p model _)       = unlessCTL (model `exprOfType` ModelTy) $
+typeCheckSentence (Export p m _)        = unlessCTL (m `exprOfType` ModelTy) $
+                                            failPosCTL p (expectedMsg ModelTy)
+
+typeCheckSentence (IsSatis p form _)    = unlessCTL (form `exprOfType` FormulaTy) $
+                                            failPosCTL p (expectedMsg FormulaTy)
+
+typeCheckSentence (Models p m form)     = do unlessCTL (m `exprOfType` ModelTy) $
+                                                failPosCTL p $ (expectedMsg ModelTy)
+                                             unlessCTL (form `exprOfType` FormulaTy) $
+                                                failPosCTL p (expectedMsg FormulaTy)
+
+typeCheckSentence (IsValid p m _ form)  = do unlessCTL (m `exprOfType` ModelTy) $
                                                 failPosCTL p (expectedMsg ModelTy)
-
-typeCheckSentence (IsSatis p formula _)      = unlessCTL (formula `exprOfType` FormulaTy) $
-                                                 failPosCTL p (expectedMsg FormulaTy)
-
-typeCheckSentence (Models p model formula) = do unlessCTL (model `exprOfType` ModelTy) $
-                                                    failPosCTL p $ (expectedMsg ModelTy)
-                                                unlessCTL (formula `exprOfType` FormulaTy) $
-                                                    failPosCTL p (expectedMsg FormulaTy)
-
-typeCheckSentence (IsValid p model _ form) = do unlessCTL (model `exprOfType` ModelTy) $
-                                                    failPosCTL p (expectedMsg ModelTy)
-                                                unlessCTL (form `exprOfType` FormulaTy) $
-                                                    failPosCTL p (expectedMsg FormulaTy)
+                                             unlessCTL (form `exprOfType` FormulaTy) $
+                                                failPosCTL p (expectedMsg FormulaTy)
 
