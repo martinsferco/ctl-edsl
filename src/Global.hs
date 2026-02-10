@@ -1,10 +1,16 @@
-module Global where
+module Global
+  ( Definition
+  , GState (..)
+  , initialState
+  , Mode (..)
+  , Conf (..) ) where
 
-import Common
-import Lang
+import Common ( VarIdent )
+import Lang   ( Type, Value )
 
 type Definition = (VarIdent, Type, Value)
 
+-- Global State of the Monad.
 data GState = GState {
   definitions :: [Definition],
   lastFile :: String
@@ -14,7 +20,7 @@ initialState :: GState
 initialState = GState [] ""
 
 data Mode 
-  = Interactive 
+  = Interactive
   | Eval
   | TypeCheck
 

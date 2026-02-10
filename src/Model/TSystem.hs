@@ -1,19 +1,21 @@
-module Model.TSystem where
+module Model.TSystem
+  ( TSystem (..)
+  , Graph (..) ) where
 
-import Common
+import Common ( LabelingFunction, TransitionFunction, Nodes )
 
 data TSystem = TSystem
   {
-    graph    :: Graph,
-    labeling :: LabelingFunction
+    graph    :: Graph,            -- Graph asociated with the Transition System 
+    labeling :: LabelingFunction  -- Labeling of each node of the graph.
   }
   deriving (Show, Eq)
 
 
 data Graph = Graph
   {
-    nodes :: Nodes,
-    inits :: Nodes,
-    trans :: TransitionFunction
+    nodes :: Nodes,              -- All nodes of the graph.
+    inits :: Nodes,              -- Initial nodes
+    trans :: TransitionFunction  -- Transitions
   }
   deriving (Show, Eq)

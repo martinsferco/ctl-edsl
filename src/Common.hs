@@ -1,4 +1,14 @@
-module Common where
+module Common 
+  ( Pos (..)
+  , VarIdent, Vars
+  , AtomIdent, Atoms
+  , NodeIdent, Nodes
+  , Label
+  , Neighboors
+  , InfoNode
+  , TransitionFunction
+  , LabelingFunction
+  , InfoNodes (..) )where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map

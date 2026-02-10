@@ -1,7 +1,10 @@
-module EvalResult where
+module EvalResult 
+  ( CheckNodeType (..)
+  , ExamplePath
+  , EvalResult (..) ) where
 
-import Common
-import Lang
+import Common ( Nodes, NodeIdent )
+import Lang   ( Formula)
 
  -- Evaluation results of the SAT functions
 data CheckNodeType = CheckInitials Nodes | CheckNode NodeIdent

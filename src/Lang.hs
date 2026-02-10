@@ -1,22 +1,25 @@
-module Lang where
+module Lang 
+  ( Type (..)
+  , UQuantifier (..)
+  , BQuantifier (..)
+  , BinaryOp (..)
+  , Expr  (..)
+  , SFormula (..)
+  , Formula (..)
+  , Sentence  (..)
+  , Program
+  , Value (..) ) where
 
-import Model.TSystem
-import Common
+import Model.TSystem ( TSystem )
+import Common        ( Pos, Label, InfoNode, VarIdent, NodeIdent, AtomIdent, LabelingFunction, InfoNodes )
 
 
-data Type
+data Type -- Types of the expressions and values
   = ModelTy
   | LabelsTy
   | NodesTy
   | FormulaTy
-  deriving Eq
-
-instance Show Type where
-  show ModelTy   = "Model"
-  show LabelsTy  = "Labels"
-  show NodesTy   = "Nodes"
-  show FormulaTy = "Formula"
-
+  deriving (Eq, Show)
 
 data UQuantifier -- Temporal unary quantifiers
   = AC -- Forall next
@@ -32,12 +35,11 @@ data BQuantifier -- Temporal binary quantifiers
   | EU -- Exists until
   deriving Show
 
-data BinaryOp
+data BinaryOp 
   = And
   | Or
   | Implies
   deriving Show
-
 
 data Expr 
   = FormulaExpr Pos SFormula   
@@ -47,8 +49,7 @@ data Expr
   | VarExpr Pos VarIdent
   deriving Show
 
-
-data SFormula
+data SFormula -- Superfitial formulas
   = SF 
   | ST 
   | SAtom AtomIdent
@@ -60,7 +61,7 @@ data SFormula
   deriving Show
 
 
-data Formula
+data Formula -- Formulas
   = F
   | T
   | Atom AtomIdent

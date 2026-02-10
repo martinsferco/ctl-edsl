@@ -1,18 +1,18 @@
 name:                ctl-edsl
 version:             0.1.0.0
-github:              "githubuser/ctl-edsl"
+github:              "martinsferco/ctl-edsl"
 license:             BSD-3-Clause
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2026 Author name here"
+author:              "Martin Sferco"
+maintainer:          "martinsferco.ms@gmail.com"
+copyright:           "2026 Martin Sferco"
 
 extra-source-files:
 - README.md
 - CHANGELOG.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+# synopsis:            Computational Tree Logic Interpreter
+# category:            Embedded Domain-Specific Language 
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -28,6 +28,7 @@ ghc-options:
 - -Widentities
 - -Wincomplete-record-updates
 - -Wincomplete-uni-patterns
+- -Wmissing-export-lists
 - -Wmissing-home-modules
 - -Wredundant-constraints
 
@@ -44,7 +45,7 @@ library:
   - prettyprinter-ansi-terminal
 
 executables:
-  ctl-edsl-exe:
+  ctl-edsl:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -59,7 +60,6 @@ executables:
     - parsec
     - haskeline
     - exceptions
-
 
 tests:
   ctl-edsl-test:

@@ -1,21 +1,23 @@
-module Eval where
+module Eval
+  ( evalSentence
+  , addDefinition ) where
 
-import Model.TSystemMethods
-import Model.TSystem
-import PrettyPrinter
-import TypeCheck
-import MonadCTL
-import Common
-import Error
-import Lang
-import Sat
+import Model.TSystemMethods ( exportTSystem, buildTSystem )
+import Model.TSystem        ( TSystem )
+import PrettyPrinter        ( ppEvalResult, )
+import TypeCheck            ( valueOfType )
+import MonadCTL             ( MonadCTL, printCTL, failCTL, addDef, searchDef  )
+import Common               ( InfoNode, InfoNodes (..), NodeIdent, LabelingFunction )
+import Error                ( notOfTypeMsg, expectedMsg )
+import Lang                 ( Sentence (..), Expr (..), Value (..), SFormula (..), Formula (..), Type (..) ) 
+import Sat                  ( isSatis, models, isValid )
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 import Control.Monad ( unless )
 
-
+-- Evals a sentence of our language.
 evalSentence :: MonadCTL m => Sentence -> m()
 evalSentence d@(Def _ _ _ _)  = addDefinition d
 
@@ -42,8 +44,6 @@ evalSentence (IsValid _ m n f) =  do vm <- reduceExpr m
                                      evalResult <- isValid ts n form
                                      printCTL $ ppEvalResult evalResult
 
-
-
 maybeExportTSystem :: MonadCTL m => Maybe TSystem -> String -> m ()
 maybeExportTSystem mts name = 
   case mts of
@@ -51,6 +51,7 @@ maybeExportTSystem mts name =
     Just ts -> exportTSystem ts name  
 
 
+-- Takes a sentence of the language and evaluates it only when the sentence is a definition.
 addDefinition :: MonadCTL m => Sentence -> m ()
 addDefinition (Def _ var ty e) = do v <- reduceExpr e
                                     unless (v `valueOfType` ty) $
@@ -59,6 +60,7 @@ addDefinition (Def _ var ty e) = do v <- reduceExpr e
 addDefinition _ = return ()
 
 
+-- Reduce and Expression of the language to a Value.
 reduceExpr :: MonadCTL m => Expr -> m Value
 reduceExpr (FormulaExpr _ form)   = Formula <$> replaceVarsFormula form
 reduceExpr (ModelExpr _ n l)      = do vNodes <- reduceExpr n
@@ -72,7 +74,8 @@ reduceExpr (NodesExpr _ n)        = return $ Nodes (constructInfonodes n)
 reduceExpr (VarExpr _ var)        = searchDef var
 
 
-
+-- Replace all variables inside a superficial formula with their corresponding
+-- formulas stored in the global state.
 replaceVarsFormula :: MonadCTL m => SFormula -> m Formula
 replaceVarsFormula SF                      = return F
 replaceVarsFormula ST                      = return T
@@ -92,7 +95,6 @@ replaceVarsFormula (SVar var)              = do varForm <- searchDef var
                                                 expectsFormula varForm
 
 
-
 constructInfonodes :: [InfoNode] -> InfoNodes
 constructInfonodes info = InfoNodes (Set.fromList initNodes) transFunction
   where initNodes = [ n | (n, initial, _) <- info, initial ]
@@ -101,11 +103,8 @@ constructInfonodes info = InfoNodes (Set.fromList initNodes) transFunction
 collectByNodes :: Ord b => [(NodeIdent, [b])] -> Map.Map NodeIdent (Set.Set b)
 collectByNodes = Map.fromListWith Set.union . map (\(n, bs) -> (n, Set.fromList bs))
 
-
-
-
--- Our language has a TypeChecker, so it should not be any problem
--- with this. We do it in case it fails.
+-- Since the language has a type checker, this should not be an issue.
+-- We include this check as a precaution.
 expectsModel :: MonadCTL m => Value -> m TSystem
 expectsModel v = do unless (v `valueOfType` ModelTy) $
                       failCTL ("Runtime error: " ++ expectedMsg ModelTy)

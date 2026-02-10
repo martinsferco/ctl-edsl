@@ -1,20 +1,21 @@
 module Parser ( P, runP, program, sentence ) where
 
-import Common
-import Lang 
+import Common ( Pos (..), VarIdent, AtomIdent, NodeIdent )
+import Lang   ( Sentence (..), Program, SFormula (..), Expr (..), Type (..),
+                UQuantifier (..), BQuantifier (..), BinaryOp (..) )
 
 import qualified Text.Parsec.Token as Tok
 import           Text.Parsec hiding (runP, parse)
 import           Text.ParserCombinators.Parsec.Language 
 
-import Data.Char (isLower, isUpper)
+import Data.Char     (isLower, isUpper)
 import Control.Monad (guard)
 
 type P = Parsec String ()
 
------------------------
+--------------------------------------------------------------------------------
 -- Lexer definition
------------------------
+--------------------------------------------------------------------------------
 
 lexer :: Tok.TokenParser t
 lexer = Tok.makeTokenParser languageDefintion
@@ -34,7 +35,6 @@ languageDefintion = emptyDef
                        "<>", "->", ",", "⊤", "⊥", "∀", "∃", "○", "◇", "□", "⊨",
                        "∧", "∨", "→", "¬"]
   }
-
 
 
 whiteSpace :: P ()
@@ -64,9 +64,9 @@ reservedOp = Tok.reservedOp lexer
 commaSep :: P a -> P [a]
 commaSep = Tok.commaSep lexer
 
------------------------
+--------------------------------------------------------------------------------
 -- Parsers definitions
------------------------
+--------------------------------------------------------------------------------
 getPos :: P Pos
 getPos = do pos <- getPosition
             return $ Pos (sourceLine pos)
@@ -90,13 +90,11 @@ nodeIdent = try $ do
   return ident
 
 
-
 typeParser :: P Type
 typeParser = try (reserved "Model"       >> return ModelTy)       <|>
              try (reserved "Labels"      >> return LabelsTy)      <|>
              try (reserved "Nodes" >> return NodesTy) <|>
              try (reserved "Formula"     >> return FormulaTy) 
-
 
 forallQuantifier :: P ()
 forallQuantifier = try (reserved "A") <|> reserved "∀"
@@ -266,9 +264,6 @@ isSatisSentence = do  pos <- getPos
                       fileName <- identifier
                       return $ IsSatis pos form fileName
 
----------------------------------------
--- General parsers
----------------------------------------
 program :: P Program
 program = many sentence
 

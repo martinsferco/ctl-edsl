@@ -1,22 +1,26 @@
-module TypeCheck where
+module TypeCheck
+   ( typeCheckSentence
+   , valueOfType ) where
 
-import MonadCTL
-import Common
-import Error
-import Lang
+import MonadCTL ( MonadCTL, unlessCTL, failPosCTL, getTy, failCTL )
+import Common   ( VarIdent )
+import Error    ( expectedMsg, incorrectVarMsg, notOfTypeMsg )
+import Lang     ( Sentence (..), SFormula (..), Value (..), Type (..), Expr (..) )
 
 import Control.Monad (unless)
 
 import qualified Data.Set as Set
 
-
+-- Checks that the expression is of a certain type
 exprOfType :: MonadCTL m => Expr -> Type -> m Bool
 exprOfType expr ty = do exprTy <- findTypeExpr expr
                         return (exprTy == ty)
 
+-- Checks that the value is of a certain type
 valueOfType :: Value -> Type -> Bool
 valueOfType value ty = findTypeValue value == ty
 
+-- Finds the type of an expression
 findTypeExpr :: MonadCTL m => Expr -> m Type
 findTypeExpr (ModelExpr p t l)   = do unlessCTL (exprOfType t NodesTy) $
                                         failPosCTL p (expectedMsg NodesTy)
@@ -38,13 +42,14 @@ findTypeExpr (FormulaExpr _ f)   = do let fv = Set.toList $ freeVariables f
                                        unless (varTy == FormulaTy) $ 
                                                failCTL (incorrectVarMsg var FormulaTy)
  
-
+-- Gets the Type of a Value
 findTypeValue :: Value -> Type
-findTypeValue (Model _)   = ModelTy
-findTypeValue (Labels _)  = LabelsTy
+findTypeValue (Model   _) = ModelTy
+findTypeValue (Labels  _) = LabelsTy
 findTypeValue (Formula _) = FormulaTy
-findTypeValue (Nodes _)   = NodesTy
+findTypeValue (Nodes   _) = NodesTy
 
+-- Gets the free variables of a Supertifial formulas
 freeVariables :: SFormula -> Set.Set VarIdent
 freeVariables SF                   = Set.empty
 freeVariables ST                   = Set.empty
@@ -63,6 +68,7 @@ freeVariables (SBQuantifier _ p q) = let varP = freeVariables p
 
 freeVariables (SVar var)           = Set.singleton var
 
+-- Type-checks a sentence
 typeCheckSentence :: MonadCTL m => Sentence -> m() 
 typeCheckSentence (Def p v ty expr)     = unlessCTL (expr `exprOfType` ty) $
                                             failPosCTL p $ (notOfTypeMsg v ty)

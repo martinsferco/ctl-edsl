@@ -1,12 +1,16 @@
-module Sat where
+module Sat
+  ( models
+  , isValid
+  , isSatis) where
 
-import Model.TSystemMethods
-import PrettyPrinter
-import Model.TSystem
-import EvalResult
-import MonadCTL
-import Common 
-import Lang
+import Model.TSystemMethods ( getInitialNodes, setInitialNodes, getNodes, isLabel, getNeighboors, 
+                              getNeighboors, findCycleInSubgraph, findPathToTargetInSubgraph )
+import PrettyPrinter        ( ppFormula, )
+import Model.TSystem        ( TSystem (..), Graph (..) )
+import EvalResult           ( EvalResult (..), ExamplePath, CheckNodeType (..) )
+import MonadCTL             ( MonadCTL, failCTL )
+import Common               ( NodeIdent, Atoms, TransitionFunction, Nodes, LabelingFunction )
+import Lang                 ( Formula (..), BQuantifier (..), UQuantifier (..), BinaryOp (..) )
 
 import Control.Monad ( filterM, join )
 
@@ -15,6 +19,11 @@ import qualified Data.Map as Map
 import Data.List (subsequences)
 
 
+--------------------------------------------------------------------------------
+-- Main functionalities of the SAT module.
+--------------------------------------------------------------------------------
+
+-- Checks if a certain Transition System models a formula.
 models :: MonadCTL m => TSystem -> Formula -> m EvalResult
 models ts form = do satForm <- sat ts form
                     let initNodes = getInitialNodes ts
@@ -35,7 +44,7 @@ models ts form = do satForm <- sat ts form
                            , checkType   = CheckInitials initNodes
                            , examplePath = example }
 
-
+-- Checks if certain formula is valid in a Transition System, starting in a given node.
 isValid :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m EvalResult
 isValid ts node form = do satForm <- sat ts form
                           let checkValid = node `Set.member` satForm
@@ -48,7 +57,12 @@ isValid ts node form = do satForm <- sat ts form
                                  , checkType   = CheckNode node
                                  , examplePath = example }
 
-
+-- Checks if a certain formula is valid for some Transition System.
+-- !! WARNING: This function it is not efficient at all, because it test the formula
+-- !!          against all possible models. It could algo go on forever if the formula
+-- !!          is not satisfiable.
+-- !!          In a future we can implement a limit, taking into account the concept
+-- !!          of the 'length' of a formula.
 isSatis :: MonadCTL m => Formula -> m (Maybe TSystem)
 isSatis form = isSatis' (tSystems $ getAtoms form) form
 
@@ -58,7 +72,7 @@ isSatis form = isSatis' (tSystems $ getAtoms form) form
                                  if satF /= Set.empty then return $ Just (setInitialNodes ts satF)
                                                           else isSatis' tss f
 
-
+-- Calculates the nodes of a Transition System where the formula is satisfiable.
 sat :: MonadCTL m => TSystem -> Formula -> m Nodes
 sat ts = (sat' ts) . transform
   where 
@@ -74,7 +88,7 @@ sat ts = (sat' ts) . transform
     sat' m (BQuantifier EU p q) = join (exUntil m <$> sat' m p <*> sat' m q)
     sat' _ f                    = failCTL $ "The sub-formula " ++ show f ++ " should be already trasnformed"
 
-
+-- Transforms the formula in another with the same semantic. 
 transform :: Formula -> Formula
 transform F                      = F
 transform T                      = T
@@ -106,30 +120,32 @@ transform (BQuantifier AU p q)   =  let tp = transform p
 
 transform (BQuantifier EU p q)   = BQuantifier EU (transform p) (transform q)
 
-
+-- Inev procedure
 inev :: MonadCTL m => TSystem -> Nodes -> m Nodes
 inev ts x = do x' <- (Set.union x <$> (preForAll ts x))
                if x' == x then return x
                           else inev ts x'
-
+-- Ex-until procedure.
 exUntil :: MonadCTL m => TSystem -> Nodes -> Nodes -> m Nodes
 exUntil ts x y  = do y' <- Set.union y <$> (Set.intersection x <$> (preExist ts y))
                      if y' == y then return y  
                                 else exUntil ts x y'
-                                
+
+-- Gives all the nodes of the Transition System that have a neighboor in x.
 preExist :: MonadCTL m => TSystem -> Nodes -> m Nodes
 preExist ts x = setFilterM existS (getNodes ts)
   where
     existS :: MonadCTL m => NodeIdent -> m Bool
     existS node = not <$> (Set.disjoint <$> (getNeighboors ts node) <*> pure x)
 
+-- Gives all the nodes of the Transition System that have all of its neighboors in x.
 preForAll :: MonadCTL m => TSystem -> Nodes -> m Nodes
 preForAll ts x = setFilterM forAllS (getNodes ts)
   where 
     forAllS :: MonadCTL m => NodeIdent -> m Bool
     forAllS node = Set.isSubsetOf <$> (getNeighboors ts node) <*> pure x
 
-
+-- Gets all the atoms of a given formula.
 getAtoms :: Formula -> Atoms
 getAtoms F                   = Set.empty 
 getAtoms T                   = Set.empty
@@ -139,7 +155,9 @@ getAtoms (BinaryOp _ p q)    = Set.union (getAtoms p) (getAtoms q)
 getAtoms (UQuantifier _ p)   = getAtoms p
 getAtoms (BQuantifier _ p q) = Set.union (getAtoms p) (getAtoms q)
 
-
+--------------------------------------------------------------------------------
+-- Construction of all possible Transition Systems
+--------------------------------------------------------------------------------
 tSystems :: Atoms -> [TSystem]
 tSystems atoms = concat $ map (\k -> tSystemGenerator atoms k) [1..]
 
@@ -159,7 +177,7 @@ allCombinations nodeSet values =
   where allSubsets :: Ord a => Set.Set a -> [Set.Set a]
         allSubsets s = map Set.fromList (subsequences (Set.toList s))
 
-
+-- Generates all the Transition System for a set of atoms an a given number of nodes.
 tSystemGenerator :: Atoms -> Int -> [TSystem]
 tSystemGenerator atoms size =
   let nodesSet    = Set.fromList (map (\n -> "_n" ++ show n) [1 .. size])
@@ -174,8 +192,12 @@ setFilterM :: (Ord a, MonadCTL m) => (a -> m Bool) -> Set.Set a -> m (Set.Set a)
 setFilterM p = fmap Set.fromList . filterM p . Set.toList
   
 
+--------------------------------------------------------------------------------
+-- Counter-Example and Witnesses
+--------------------------------------------------------------------------------
 
-
+-- Builds a counter-example path for the given formula, in a Transition System, starting at a particular node.
+-- * Remark: the function asummes that the formula is not valid for the given node and TSystem.
 counterExample :: MonadCTL m => NodeIdent -> TSystem -> Formula -> m ExamplePath
 counterExample node _  F                      = return [(node, modelsText False node F)]
 counterExample _    _  T                      = failCTL "It is impossible to find a counterexample for ⊤!"
@@ -191,92 +213,19 @@ counterExample node _  (BinaryOp Implies p q) = return [(node, modelsText True  
 counterExample node ts (UQuantifier AC p)     = do satP <- sat ts p
                                                    neighs <- getNeighboors ts node
                                                    badNeigh <- choice (neighs `Set.difference` satP)
-                                                   return [ (node, "Starting node"),(badNeigh, modelsText False badNeigh p)]
+                                                   return [ (node, "Starting node"), (badNeigh, modelsText False badNeigh p)]
 
 counterExample node _  (UQuantifier EC p)     = return [(node, "All neighboors of " ++ node ++ " do not satisfy " ++ ppFormula p)]         
-counterExample node ts (UQuantifier AR p)     = findCycleOutsideSatFormula ts node p 
+counterExample node ts (UQuantifier AR p)     = findCycleFormula OutsideSat ts node p 
 counterExample node _  (UQuantifier ER p)     = return [(node, "All traces starting at " ++ node ++ ", never reach an state that satifies " ++ ppFormula p)]         
-counterExample node ts (UQuantifier AS p)     = findPathOutsideSatFormula ts node p
-counterExample node _  (UQuantifier ES p)     = return [(node, "All traces starting at " ++ node ++ ", reach an state that does not satisfies " ++ ppFormula p)]         
+counterExample node ts (UQuantifier AS p)     = findPathFormula OutsideSat ts node p
+counterExample node _  (UQuantifier ES p)     = return [(node, "All traces starting at " ++ node ++ ", reach an state that does not satisfy " ++ ppFormula p)]         
 counterExample node ts (BQuantifier AU p q)   = findForallUntilCounterExample ts node p q
 counterExample node _  (BQuantifier EU _ _)   = return [(node, "All traces starting at " ++ node ++ ", do not satify the semantic of the Until operator")]         
 
 
-
-
-findCycleOutsideSatFormula :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m ExamplePath
-findCycleOutsideSatFormula ts start form = do
-  let notFormula = Not form
-  satNotFormula <- sat ts notFormula
-  maybeCicle <- findCycleInSubgraph ts satNotFormula start 
-  case maybeCicle of
-    Just cycleExample -> return $ addCycleDescription notFormula cycleExample
-    Nothing           -> failCTL "No cycle found in the set of nodes in which the the formula is not satisfiable"
-    
-findPathOutsideSatFormula :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m ExamplePath
-findPathOutsideSatFormula ts start form = do
-  let notFormula = Not form
-  satNotFormula <- sat ts notFormula
-  maybePath <- findPathToTargetInSubgraph ts (getNodes ts) start satNotFormula
-  case maybePath of
-    Just path -> return $ addPathDescription form notFormula path
-    Nothing -> failCTL "No path found that reaches a set of nodes that do not satisfy the formula."
- 
-findCycleInSatFormula :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m ExamplePath
-findCycleInSatFormula ts start form = do
-  satFormula <- sat ts form
-  maybeCicle <- findCycleInSubgraph ts satFormula start 
-  case maybeCicle of
-    Just cycleExample -> return $ addCycleDescription form cycleExample
-    Nothing           -> failCTL "No cycle found inside the nodes in which the formula is satisfiable"
-    
-findPathToSatFormula :: MonadCTL m => TSystem -> NodeIdent -> Formula -> m ExamplePath
-findPathToSatFormula ts start form = do
-  satFormula <- sat ts form
-  maybePath <- findPathToTargetInSubgraph ts (getNodes ts) start satFormula
-  case maybePath of
-    Just path -> return $ addPathDescription (Not form) form path
-    Nothing -> failCTL "No path found that reaches a set of nodes do satisfy the formula."
-
-findForallUntilCounterExample :: MonadCTL m => TSystem -> NodeIdent -> Formula -> Formula -> m ExamplePath
-findForallUntilCounterExample ts start p q = do 
-  let pNotQ = BinaryOp And p (Not q)
-  let notPNotQ = BinaryOp And (Not p) (Not q)
-  satPNotQ <- sat ts pNotQ 
-  satNotPNotQ <- sat ts notPNotQ
-  maybeCycle  <- findCycleInSubgraph ts satPNotQ start
-  case maybeCycle of
-   Just cycleExample -> return $ addCycleDescription pNotQ cycleExample
-   Nothing           -> do
-     maybePath <- findPathToTargetInSubgraph ts satPNotQ start satNotPNotQ
-     case maybePath of
-       Just path -> return $ addPathDescription pNotQ notPNotQ path
-       Nothing -> failCTL "No counterexample found for the forall until operator."
-
-
-findExistUntilWitness :: MonadCTL m => TSystem -> NodeIdent -> Formula -> Formula -> m ExamplePath
-findExistUntilWitness ts start p q = do 
-  satP <- sat ts p 
-  satQ <- sat ts q
-  maybePath <- findPathToTargetInSubgraph ts satP start satQ
-  case maybePath of
-    Just path -> return $ addPathDescription p q path
-    Nothing -> failCTL "No witness found for the exist until operator."
-
-
-addCycleDescription :: Formula -> [NodeIdent] -> ExamplePath
-addCycleDescription form c = map (\n -> (n, modelsText True n form)) (init c) ++ 
-                                    [(last c, modelsText True (last c) form ++ " - Cycle detection")]
-
-addPathDescription :: Formula -> Formula -> [NodeIdent] -> ExamplePath
-addPathDescription form endFormula path = map (\n -> (n, modelsText True n form)) (init path) ++ 
-                                             [(last path, modelsText True (last path) endFormula)]
-
-modelsText :: Bool -> NodeIdent -> Formula -> String
-modelsText isModel node form = "M," ++ node ++ " " ++ symbol ++ ppFormula form
-  where symbol = if isModel then "⊨ " else "⊭ "
-
-
+-- Builds a witness path for the given formula, in a Transition System, starting at a particular node.
+-- * Remark: the function asummes that the formula is valid for the given node and TSystem.
 witness :: MonadCTL m => NodeIdent -> TSystem -> Formula -> m ExamplePath
 witness _    _  F                      = failCTL "It is impossible to find a witness for ⊥!"
 witness node _  T                      = return [(node, modelsText True node T)]
@@ -293,14 +242,88 @@ witness node _  (UQuantifier AC p)     = return [(node, "All neighboors of " ++ 
 witness node ts (UQuantifier EC p)     = do satP <- sat ts p
                                             neighs <- getNeighboors ts node
                                             goodNeigh <- choice (neighs `Set.intersection` satP)
-                                            return [ (node, "Starting node"),(goodNeigh, modelsText True goodNeigh p)]
+                                            return [ (node, "Starting node"), (goodNeigh, modelsText True goodNeigh p)]
 
 witness node _  (UQuantifier AR p)     = return [(node, "All traces starting at " ++ node ++ " reach an state that satifies " ++ ppFormula p)]          
-witness node ts (UQuantifier ER p)     = findPathToSatFormula ts node p
-witness node _  (UQuantifier AS p)     = return [(node, "All traces starting at " ++ node ++ " do not reach an state that does not satifies " ++ ppFormula p)]          
-witness node ts (UQuantifier ES p)     = findCycleInSatFormula ts node p 
-witness node _  (BQuantifier AU _ _)   = return [(node, "All traces starting at " ++ node ++ " satisfy the semantic of the until operator ")]          
+witness node ts (UQuantifier ER p)     = findPathFormula InsideSat ts node p
+witness node _  (UQuantifier AS p)     = return [(node, "All traces starting at " ++ node ++ " never reach an state that does not satisfy " ++ ppFormula p)]          
+witness node ts (UQuantifier ES p)     = findCycleFormula InsideSat ts node p 
+witness node _  (BQuantifier AU _ _)   = return [(node, "All traces starting at " ++ node ++ " satisfy the semantic of the Until operator ")]          
 witness node ts (BQuantifier EU p q)   = findExistUntilWitness ts node p q
+
+
+--------------------------------------------------------------------------------
+-- Cycles and paths for counter-examples and witnesess
+--------------------------------------------------------------------------------
+
+data SearchMode = InsideSat | OutsideSat
+
+findCycleFormula :: MonadCTL m => SearchMode -> TSystem -> NodeIdent -> Formula -> m ExamplePath
+findCycleFormula searchMode ts start form = do
+  let (form', msg) = case searchMode of 
+                      InsideSat  -> (form, "satisfiable.")
+                      OutsideSat -> (Not form, "not satisfiable.")
+
+  satForm' <- sat ts form'
+  maybeCicle <- findCycleInSubgraph ts satForm' start
+
+  case maybeCicle of
+    Just cycleExample -> return $ addCycleDescription form' cycleExample
+    Nothing           -> failCTL $ "No cycle found in the set of nodes in which the the formula is " ++ msg
+  
+findPathFormula :: MonadCTL m => SearchMode -> TSystem -> NodeIdent -> Formula -> m ExamplePath
+findPathFormula searchMode ts start form = do
+
+  let (form', formPath, msg) = case searchMode of
+                                InsideSat  -> (form, Not form, "satisfy")
+                                OutsideSat -> (Not form, form, "not satisfy")
+
+  satForm' <- sat ts form'
+  maybePath <- findPathToTargetInSubgraph ts (getNodes ts) start satForm'
+  case maybePath of 
+    Just path -> return $ addPathDescription formPath form' path
+    Nothing -> failCTL $ "No path found that reaches a set of nodes that do " ++ msg ++ " the formula."
+
+
+findForallUntilCounterExample :: MonadCTL m => TSystem -> NodeIdent -> Formula -> Formula -> m ExamplePath
+findForallUntilCounterExample ts start p q = do 
+  let pNotQ = BinaryOp And p (Not q)
+  let notPNotQ = BinaryOp And (Not p) (Not q)
+  satPNotQ <- sat ts pNotQ 
+  satNotPNotQ <- sat ts notPNotQ
+  maybeCycle  <- findCycleInSubgraph ts satPNotQ start -- Searchs for a Cycle of (p && !q)
+  case maybeCycle of
+   Just cycleExample -> return $ addCycleDescription pNotQ cycleExample
+   Nothing           -> do
+     maybePath <- findPathToTargetInSubgraph ts satPNotQ start satNotPNotQ -- Searchs for a path of (p && !q) until (p! && !q)
+     case maybePath of
+       Just path -> return $ addPathDescription pNotQ notPNotQ path
+       Nothing -> failCTL "No counterexample found for the forall until operator."
+
+findExistUntilWitness :: MonadCTL m => TSystem -> NodeIdent -> Formula -> Formula -> m ExamplePath
+findExistUntilWitness ts start p q = do 
+  satP <- sat ts p 
+  satQ <- sat ts q
+  maybePath <- findPathToTargetInSubgraph ts satP start satQ -- Searchs for a path of p until q
+  case maybePath of
+    Just path -> return $ addPathDescription p q path
+    Nothing -> failCTL "No witness found for the exist until operator."
+
+--------------------------------------------------------------------------------
+-- Utility functions.
+--------------------------------------------------------------------------------
+
+addCycleDescription :: Formula -> [NodeIdent] -> ExamplePath
+addCycleDescription form c = map (\n -> (n, modelsText True n form)) (init c) ++ 
+                                    [(last c, modelsText True (last c) form ++ " - Cycle detection")]
+
+addPathDescription :: Formula -> Formula -> [NodeIdent] -> ExamplePath
+addPathDescription form endFormula path = map (\n -> (n, modelsText True n form)) (init path) ++ 
+                                             [(last path, modelsText True (last path) endFormula)]
+
+modelsText :: Bool -> NodeIdent -> Formula -> String
+modelsText isModel node form = "M," ++ node ++ " " ++ symbol ++ ppFormula form
+  where symbol = if isModel then "⊨ " else "⊭ "
 
 
 choice :: MonadCTL m => Set.Set t -> m t
