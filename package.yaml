@@ -53,21 +53,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - ctl
+    - ctl-edsl
     - mtl
     - optparse-applicative
     - containers
     - parsec
     - haskeline
     - exceptions
-
-tests:
-  ctl-edsl-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - ctl
