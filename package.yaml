@@ -45,7 +45,7 @@ library:
   - prettyprinter-ansi-terminal
 
 executables:
-  ctl-edsl:
+  ctl:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -53,7 +53,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - ctl-edsl
+    - ctl
     - mtl
     - optparse-applicative
     - containers
@@ -70,4 +70,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - ctl-edsl
+    - ctl

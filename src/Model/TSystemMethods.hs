@@ -143,7 +143,7 @@ tryEach (action : rest) = do
     Nothing -> tryEach rest
 
 --------------------------------------------------------------------------------
--- Exportation methods
+-- PDF export features
 --------------------------------------------------------------------------------
 
 -- Export a Transition System onto a .pdf file.

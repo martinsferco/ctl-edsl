@@ -131,7 +131,7 @@ interactiveCommands =
   [ Cmd [":browse", ":b"] ""       (const Browse) "Shows all the definitions in the global scope."
   , Cmd [":load",   ":l"] "<file>" LoadFile       "Loads a program from a file."
   , Cmd [":reload", ":r"] ""       (const Reload) "Reloads a program from the last file."
-  , Cmd [":type",   ":t"] "<def>"  FindType       "Finds the type of a global definition.."
+  , Cmd [":type",   ":t"] "<def>"  FindType       "Finds the type of a global definition."
   , Cmd [":show",   ":s"] "<def>"  Show           "Prints a global definition."
   , Cmd [":help",   ":h"] ""       (const Help)   "Shows a list of available commands."
   , Cmd [":quit",   ":q"] ""       (const Quit)   "Finishes the interpreter." ]
