@@ -212,7 +212,7 @@ handleCommand (LoadFile nameFile) =
       return True
 
 handleCommand (FindType var) = 
-  do  catchError (getTy var >>= printCTL . show)
+  do  catchError (getTy var >>= printCTL . ppType)
                  (printCTL . show)
       return True
 
