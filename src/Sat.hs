@@ -159,7 +159,7 @@ getAtoms (BQuantifier _ p q) = Set.union (getAtoms p) (getAtoms q)
 -- Construction of all possible Transition Systems
 --------------------------------------------------------------------------------
 tSystems :: Atoms -> [TSystem]
-tSystems atoms = concat $ map (\k -> tSystemGenerator atoms k) [1..]
+tSystems atoms = take 1000000 (concat $ map (\k -> tSystemGenerator atoms k) [1..])
 
 allLabelings :: Nodes -> Atoms -> [LabelingFunction]
 allLabelings nodeSet atoms = allCombinations nodeSet atoms
