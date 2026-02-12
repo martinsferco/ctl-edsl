@@ -33,7 +33,7 @@ languageDefintion = emptyDef
                        "Formula", "export", "F", "T", "A", "E", "U", "as"]
   , reservedOpNames = ["=", "::", "|=", "=>", "<=", "&&", "||", "!", "[]", "()",
                        "<>", "->", ",", "⊤", "⊥", "∀", "∃", "○", "◇", "□", "⊨",
-                       "∧", "∨", "→", "¬"]
+                       "^", "∨", "→", "¬"]
   }
 
 
@@ -121,7 +121,7 @@ modelsFormula :: P ()
 modelsFormula = try (reserved "|=") <|> reservedOp "⊨"
 
 andOp :: P ()
-andOp = try (reserved "&&") <|> reservedOp "∧"
+andOp = try (reserved "&&") <|> reservedOp "^"
 
 orOp:: P ()
 orOp= try (reserved "||") <|> reservedOp "∨"
