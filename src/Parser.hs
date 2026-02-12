@@ -97,10 +97,10 @@ typeParser = try (reserved "Model"       >> return ModelTy)       <|>
              try (reserved "Formula"     >> return FormulaTy) 
 
 forallQuantifier :: P ()
-forallQuantifier = try (reserved "A") <|> reserved "∀"
+forallQuantifier = try (reserved "A") <|> reservedOp "∀"
 
 existsQuantifier :: P ()
-existsQuantifier = try (reserved "E") <|> reserved "∃"
+existsQuantifier = try (reserved "E") <|> reservedOp "∃"
 
 bottom :: P ()
 bottom = try (reserved "F") <|> reservedOp "⊥"
@@ -109,28 +109,28 @@ top :: P ()
 top = try (reserved "T") <|> reservedOp "⊤"
 
 circle :: P ()
-circle = try (reserved "()") <|> reservedOp "○"
+circle = try (reservedOp "()") <|> reservedOp "○"
 
 rombus :: P ()
-rombus = try (reserved "<>") <|> reservedOp "◇"
+rombus = try (reservedOp "<>") <|> reservedOp "◇"
 
 square :: P ()
-square = try (reserved "[]") <|> reservedOp "□"
+square = try (reservedOp "[]") <|> reservedOp "□"
 
 modelsFormula :: P ()
-modelsFormula = try (reserved "|=") <|> reservedOp "⊨"
+modelsFormula = try (reservedOp "|=") <|> reservedOp "⊨"
 
 andOp :: P ()
-andOp = try (reserved "&&") <|> reservedOp "^"
+andOp = try (reservedOp "&&") <|> reservedOp "^"
 
 orOp:: P ()
-orOp= try (reserved "||") <|> reservedOp "∨"
+orOp= try (reservedOp "||") <|> reservedOp "∨"
 
 implies :: P ()
-implies = try (reserved "->") <|> reservedOp "→"
+implies = try (reservedOp "->") <|> reservedOp "→"
 
 negation :: P ()
-negation = try (reserved "!") <|> reservedOp "!"
+negation = try (reservedOp "!") <|> reservedOp "¬"
 
 expr :: P Expr
 expr = try modelExpr  <|>
