@@ -75,7 +75,8 @@ define MazeLabels :: Labels = {
 
 define MazeNodes :: Nodes = {
     (_start) => { _room1, _room2 }
-    _room1   => { _room3, _trap }
+    _room1   => { _room3 }
+    _room1   => { _trap }
     _room2   => { _room1, _exit }
     _room3   => { _room2, _room3 } 
     _trap    => { _trap }          
@@ -84,6 +85,12 @@ define MazeNodes :: Nodes = {
 
 define Maze :: Model = <MazeNodes, MazeLabels>
 
+Maze |= E [] p
+Maze |= A <> win
+Maze |= E [ p U win ]
+Maze, _trap |= A [] dead
+
+export Maze as maze_check
 
 // ==========================================================
 // 4. MODELO: JUSTICIA Y OSCILACIÓN (FAIRNESS)
