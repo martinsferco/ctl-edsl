@@ -48,9 +48,9 @@ After building, you can run the interpreter in three different modes:
 Executes the entire program, including definitions, model checking, and exports:
 
 ```bash
-stack exec -- ctli --eval examples/test.ctl
+stack exec -- ctl --eval test/test.ctl
 # or
-stack exec -- ctli -e examples/test.ctl
+stack exec -- ctl -e test/test.ctl
 ```
 
 ### Type Check Mode
@@ -58,9 +58,9 @@ stack exec -- ctli -e examples/test.ctl
 Only validates types without executing model checking or exports:
 
 ```bash
-stack exec -- ctli --typecheck examples/test.ctl
+stack exec -- ctl --typecheck test/test.ctl
 # or
-stack exec -- ctli -t examples/test.ctl
+stack exec -- ctl -t test/test.ctl
 ```
 
 ### Interactive Mode
@@ -68,12 +68,12 @@ stack exec -- ctli -t examples/test.ctl
 Starts a REPL (Read-Eval-Print Loop) for interactive exploration:
 
 ```bash
-stack exec -- ctli --interactive
+stack exec -- ctl --interactive
 # or
-stack exec -- ctli -i
+stack exec -- ctl -i
 
 # Load files on startup (only definitions are loaded)
-stack exec -- ctli -i examples/test.ctl
+stack exec -- ctl -i test/test.ctl
 ```
 
 **Important:** In interactive mode, when you load files using `-i` or `:load`:
@@ -85,7 +85,7 @@ stack exec -- ctli -i examples/test.ctl
 
 ### Identifier Naming Rules
 
-CTLI uses three distinct naming conventions to differentiate identifiers:
+CTL uses three distinct naming conventions to differentiate identifiers:
 
 | Type | Convention | Examples | Usage |
 |------|------------|----------|-------|
@@ -184,7 +184,7 @@ define N :: Nodes = {
 
 ### Model Checking
 
-CTLI supports three types of model checking operations:
+CTL supports three types of model checking operations:
 
 #### Global Model Checking
 
