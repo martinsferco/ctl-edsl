@@ -2,7 +2,7 @@
 
 An interpreter for Computational Tree Logic (CTL) with model checking capabilities, written in Haskell.
 
-## Installation
+## Dependencies and Compilation
 
 ### Prerequisites
 
