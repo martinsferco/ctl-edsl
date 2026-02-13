@@ -89,55 +89,61 @@ nodeIdent = try $ do
   guard (c == '_')
   return ident
 
-
 typeParser :: P Type
-typeParser = try (reserved "Model"       >> return ModelTy)       <|>
-             try (reserved "Labels"      >> return LabelsTy)      <|>
-             try (reserved "Nodes" >> return NodesTy) <|>
-             try (reserved "Formula"     >> return FormulaTy) 
+typeParser = (reserved "Model"   >> return ModelTy)   <|>
+             (reserved "Labels"  >> return LabelsTy)  <|>
+             (reserved "Nodes"   >> return NodesTy)   <|>
+             (reserved "Formula" >> return FormulaTy) 
 
 forallQuantifier :: P ()
-forallQuantifier = try (reserved "A") <|> reservedOp "∀"
+forallQuantifier = reserved "A" <|> reservedOp "∀"
 
 existsQuantifier :: P ()
-existsQuantifier = try (reserved "E") <|> reservedOp "∃"
+existsQuantifier = reserved "E" <|> reservedOp "∃"
 
 bottom :: P ()
-bottom = try (reserved "F") <|> reservedOp "⊥"
+bottom = reserved "F" <|> reservedOp "⊥"
 
 top :: P ()
-top = try (reserved "T") <|> reservedOp "⊤"
+top = reserved "T" <|> reservedOp "⊤"
 
 circle :: P ()
-circle = try (reservedOp "()") <|> reservedOp "○"
+circle = reservedOp "()" <|> reservedOp "○"
 
 rombus :: P ()
-rombus = try (reservedOp "<>") <|> reservedOp "◇"
+rombus = reservedOp "<>" <|> reservedOp "◇"
 
 square :: P ()
-square = try (reservedOp "[]") <|> reservedOp "□"
+square = reservedOp "[]" <|> reservedOp "□"
 
 modelsFormula :: P ()
-modelsFormula = try (reservedOp "|=") <|> reservedOp "⊨"
+modelsFormula = reservedOp "|=" <|> reservedOp "⊨"
 
 andOp :: P ()
-andOp = try (reservedOp "&&") <|> reservedOp "^"
+andOp = reservedOp "&&" <|> reservedOp "^"
 
 orOp:: P ()
-orOp= try (reservedOp "||") <|> reservedOp "∨"
+orOp= reservedOp "||" <|> reservedOp "∨"
 
 implies :: P ()
-implies = try (reservedOp "->") <|> reservedOp "→"
+implies = reservedOp "->" <|> reservedOp "→"
 
 negation :: P ()
-negation = try (reservedOp "!") <|> reservedOp "¬"
+negation = reservedOp "!" <|> reservedOp "¬"
 
 expr :: P Expr
-expr = try modelExpr  <|>
-       try labelsExpr <|>
-       try nodesExpr  <|>
-       try varExpr    <|>
-       formulaExpr
+expr = modelExpr        <|>
+       try labelsExpr   <|>
+       nodesExpr        <|>
+       formulaOrVarExpr
+
+formulaOrVarExpr :: P Expr
+formulaOrVarExpr = do
+  p <- getPos
+  form <- formulaExpr
+  return $ case form of
+    SVar var -> VarExpr p var
+    _        -> FormulaExpr p form       
 
 labelsExpr :: P Expr 
 labelsExpr = LabelsExpr <$> getPos <*> braces (many labelsExprAux)
@@ -165,14 +171,8 @@ nodesExpr = NodesExpr <$> getPos <*> braces (many1 nodesExprAux)
                         (do node <- nodeIdent        ; return (node, False))
 
 
-varExpr :: P Expr 
-varExpr = VarExpr <$> getPos <*> varIdent
-
-formulaExpr :: P Expr
-formulaExpr = FormulaExpr <$> getPos <*> formulaExpr'
-  
-formulaExpr' :: P SFormula
-formulaExpr' = chainr1 orTerm (implies >> return (SBinaryOp Implies))
+formulaExpr :: P SFormula
+formulaExpr = chainr1 orTerm (implies >> return (SBinaryOp Implies))
 
 orTerm :: P SFormula
 orTerm = chainl1 andTerm (orOp >> return (SBinaryOp Or))
@@ -181,10 +181,10 @@ andTerm :: P SFormula
 andTerm = chainl1 notTerm (andOp >> return (SBinaryOp And))
 
 notTerm :: P SFormula
-notTerm = try (negation >> SNot <$> notTerm) <|> quantifierTerm
+notTerm = (negation >> SNot <$> notTerm) <|> quantifierTerm
 
 quantifierTerm :: P SFormula
-quantifierTerm = try unaryQuantifier <|> try binaryQuantifier <|> atomicTerm
+quantifierTerm = unaryQuantifier <|> binaryQuantifier <|> atomicTerm
 
 unaryQuantifier :: P SFormula
 unaryQuantifier = 
@@ -198,28 +198,27 @@ unaryQuantifier =
 binaryQuantifier :: P SFormula
 binaryQuantifier = 
   try (forallQuantifier >> (uncurry $ SBQuantifier AU) <$> brackets binaryAux) <|>
-      (existsQuantifier >> (uncurry $ SBQuantifier EU) <$> brackets binaryAux)
+  try (existsQuantifier >> (uncurry $ SBQuantifier EU) <$> brackets binaryAux)
   where 
     binaryAux = do  
-      leftFormula <- formulaExpr'  
+      leftFormula <- formulaExpr  
       reserved "U"
-      rightFormula <- formulaExpr'
+      rightFormula <- formulaExpr
       return (leftFormula, rightFormula)
 
 atomicTerm :: P SFormula 
-atomicTerm = 
-  try (parens formulaExpr') <|> 
-  try (top >> return ST)    <|>
-  try (bottom >> return SF) <|>
-  try (SVar <$> varIdent)   <|>
-      (SAtom <$> atomIdent)
+atomicTerm =  (parens formulaExpr)  <|> 
+              (top >> return ST)    <|>
+              (bottom >> return SF) <|>
+              (SVar <$> varIdent)   <|>
+              (SAtom <$> atomIdent)
 
 
 sentence :: P Sentence
-sentence = try defSentence     <|> 
-           try exportSentence  <|>
+sentence = defSentence         <|> 
+           exportSentence      <|>
            try modelsSentence  <|>
-           try isValidSentence <|>
+           isValidSentence     <|>
            isSatisSentence 
 
 defSentence :: P Sentence
