@@ -1,4 +1,3 @@
-// Definición de etiquetas descriptivas
 define MutexLabels :: Labels = {
     _idle        <= { n1, n2 }     // Estado inicial: nadie pide nada
     _p1_waiting  <= { t1, n2 }     // P1 quiere entrar, P2 no
@@ -10,7 +9,6 @@ define MutexLabels :: Labels = {
     _p2_in_p1_wait <= { t1, c2 }   // P2 dentro y P1 esperando
 }
 
-// Definición de transiciones con nombres claros
 define MutexNodes :: Nodes = {
     (_idle)        => { _p1_waiting, _p2_waiting }
     _p1_waiting    => { _p1_critical, _both_trying }
@@ -24,16 +22,8 @@ define MutexNodes :: Nodes = {
 
 define MutexModel :: Model = <MutexNodes, MutexLabels>
 
-// --- Fórmulas de Verificación ---
-
-// Seguridad: Nunca están ambos en la sección crítica
 define Safety :: Formula = A[] !(c1 && c2)
 
-// Vivacidad: Si P1 entra en estado de espera, eventualmente entrará a la sección crítica
 define NoStarvationP1 :: Formula = A[] (t1 -> A<> c1)
 
 export MutexModel as mutex
-
-// Comprobaciones
-// |= Safety
-// mutex, _both_trying |= A<> (c1 || c2)

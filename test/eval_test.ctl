@@ -59,4 +59,4 @@ export NewModel as myMod
 NewModel |= Q
 NewModel, _n2 |= Q
 
-|= Q as manolo
+|= Q as fileQ
