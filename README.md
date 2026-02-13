@@ -65,7 +65,7 @@ stack exec -- ctl -t test/test.ctl
 
 ### Interactive Mode
 
-Starts a REPL (Read-Eval-Print Loop) for interactive exploration:
+Starts a REPL (Read-Eval-Print Loop) for interactive execution:
 
 ```bash
 stack exec -- ctl --interactive
@@ -90,7 +90,7 @@ CTL uses three distinct naming conventions to differentiate identifiers:
 | Type | Convention | Examples | Usage |
 |------|------------|----------|-------|
 | **Nodes** | Start with `_` | `_start`, `_room1`, `_000` | States in transition systems |
-| **Atoms** | Lowercase first letter | `p`, `q`, `entrada`, `win` | Atomic propositions (boolean variables) |
+| **Atoms** | Lowercase first letter | `p`, `q`, `entrada`, `win` | Atomic propositions  |
 | **Variables** | Uppercase first letter | `Counter`, `Phi`, `MyModel` | Named definitions (formulas, models, etc.) |
 
 ### CTL Operators
@@ -112,14 +112,14 @@ CTL uses **path quantifiers** combined with **state predicates**:
 
 | Operator | ASCII | UTF-8 | Meaning |
 |----------|-------|-------|---------|
-| All Next | `A () p` | `A○ p` | p holds in all next states |
-| Exists Next | `E () p` | `E○ p` | p holds in at least one next state |
-| Inevitable | `A <> p` | `A◇ p` | p eventually holds in all paths |
-| Possible | `E <> p` | `E◇ p` | p eventually holds in some path |
-| Invariant | `A [] p` | `A□ p` | p always holds in all paths |
-| Invariant for some trace | `E [] p` | `E□ p` | p always holds in some path |
-| All Until | `A [p U q]` | `A[p U q]` | p holds until q in all paths |
-| Exists Until | `E [p U q]` | `E[p U q]` | p holds until q in some path |
+| All Next | `A () p` | `∀○ p` | p holds in all next states |
+| Exists Next | `E () p` | `∃○ p` | p holds in at least one next state |
+| Inevitable | `A <> p` | `∀◇ p` | p eventually holds in all paths |
+| Possible | `E <> p` | `∃◇ p` | p eventually holds in some path |
+| Invariant | `A [] p` | `∀□ p` | p always holds in all paths |
+| Invariant for some trace | `E [] p` | `∃□ p` | p always holds in some path |
+| All Until | `A [p U q]` | `∀[p U q]` | p holds until q in all paths |
+| Exists Until | `E [p U q]` | `∃[p U q]` | p holds until q in some path |
 
 #### Examples
 
@@ -137,12 +137,11 @@ define Response :: Formula = A [] (request -> A <> response)
 
 // It's possible to reach the goal
 define Reachable :: Formula = E <> goal
-
 ```
 
 ### Model Definition
 
-Models represent transition systems (Kripke structures) with states, transitions, and labeling:
+Models represent transition systems with states, transitions, and labeling:
 
 ```javascript
 // Define labeling function: which atoms are true in each state
@@ -165,7 +164,7 @@ define MyModel :: Model = <MyNodes, MyLabels>
 
 **Important Notes:**
 
-1. **Initial State:** The initial state is indicated by wrapping it in parentheses: `(_state0)`
+1. **Initial State:** The initial states are indicated by wrapping them in parentheses: `(_state0)`
 2. **Merging:** If you define the same node multiple times, the results are merged:
 
 ```javascript
@@ -261,7 +260,7 @@ When running in interactive mode (REPL), you can use these commands:
 | `:reload` or `:r` | Reload the last loaded file |
 | `:browse` or `:b` | Display all definitions in the global scope |
 | `:type <var>` or `:t <var>` | Show the type of a defined variable |
-| `:show <var>` or `:s <var>` | Show the value/structure of a definition |
+| `:show <var>` or `:s <var>` | Show the value of a definition |
 | `:help` or `:h` | Display list of available commands |
 | `:quit` or `:q` | Exit the interpreter |
 ---
