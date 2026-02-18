@@ -20,6 +20,7 @@ Install the Graphviz C library (required for PDF export):
 sudo apt-get update
 sudo apt-get install -y graphviz libgraphviz-dev
 ```
+If you are not using a Debian-based distribution, install Graphviz with your own package manager.
 
 ### Haskell Dependencies
 
@@ -208,6 +209,9 @@ Check if a formula is satisfiable and generate a model:
 ```javascript
 |= Phi as result_name      
 ```
+**Note**: This procedure may not terminate.
+If the formula has no model, the search might not finish. It may also fail to terminate in practice if the formula is too complex and the model search space is too large.
+
 
 ### Export to PDF
 
