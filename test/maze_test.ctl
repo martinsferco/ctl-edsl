@@ -1,4 +1,4 @@
-efine MazeLabels :: Labels = {
+define MazeLabels :: Labels = {
     _start <= { entrada }
     _room1 <= { p }
     _room2 <= { q }
